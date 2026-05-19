@@ -79,7 +79,7 @@ if (empty($requestParams['pid']) || (string) $requestParams['pid'] !== (string) 
     whmcs_peakrack_epay_callback_finish($isReturn, $gatewayParams, 0, 'failure');
 }
 
-if (!whmcs_peakrack_epay_verify($requestParams, $gatewayParams['merchantKey'])) {
+if (!whmcs_peakrack_epay_verify_callback($requestParams, $gatewayParams)) {
     logTransaction($gatewayModuleName, $safeLogData, 'Signature Verification Failed');
     whmcs_peakrack_epay_callback_finish($isReturn, $gatewayParams, 0, 'failure');
 }

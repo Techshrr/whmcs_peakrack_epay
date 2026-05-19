@@ -50,16 +50,18 @@ function whmcs_peakrack_epay_lang($key, array $params = [], array $replace = [])
             'missing_config' => 'PeakRack EPay is not fully configured. Missing: :field.',
             'invalid_submit_url' => 'PeakRack EPay Submit URL is invalid.',
             'min_amount' => 'EPay requires a minimum payment amount of 0.01 CNY.',
-            'currency_error' => 'EPay V1 payments expect CNY. Set this gateway\'s "Convert To For Processing" option to CNY before using it for :currency invoices.',
+            'currency_error' => 'EPay payments expect CNY. Set this gateway\'s "Convert To For Processing" option to CNY before using it for :currency invoices.',
             'signing_failed' => 'EPay request signing failed: :message',
+            'openssl_missing' => 'EPay RSA signing requires the PHP OpenSSL extension.',
             'pay_button' => 'Pay with EPay',
         ],
         'zh' => [
             'missing_config' => 'PeakRack 易支付尚未完整配置，缺少：:field。',
             'invalid_submit_url' => 'PeakRack 易支付 Submit URL 无效。',
             'min_amount' => '易支付最低支付金额为 0.01 元人民币。',
-            'currency_error' => '易支付 V1 接口应使用 CNY。请先在此支付网关中把 “Convert To For Processing” 设置为 CNY，再用于 :currency 发票。',
+            'currency_error' => '易支付接口应使用 CNY。请先在此支付网关中把 “Convert To For Processing” 设置为 CNY，再用于 :currency 发票。',
             'signing_failed' => '易支付请求签名失败：:message',
+            'openssl_missing' => '易支付 RSA 签名需要 PHP OpenSSL 扩展。',
             'pay_button' => '使用易支付支付',
         ],
     ];
@@ -240,6 +242,19 @@ function whmcs_peakrack_epay_build_sign_content(array $params)
     return implode('&', $parts);
 }
 
+function whmcs_peakrack_epay_api_mode(array $params)
+{
+    $value = strtolower(trim((string) ($params['apiVersion'] ?? '')));
+    $value = str_replace([' ', '/', '-', '(', ')'], '_', $value);
+
+    return (strpos($value, 'v2') !== false || strpos($value, 'rsa') !== false) ? 'v2_rsa' : 'v1_md5';
+}
+
+function whmcs_peakrack_epay_is_v2_mode(array $params)
+{
+    return whmcs_peakrack_epay_api_mode($params) === 'v2_rsa';
+}
+
 function whmcs_peakrack_epay_sign(array $params, $merchantKey)
 {
     $merchantKey = trim((string) $merchantKey);
@@ -263,6 +278,125 @@ function whmcs_peakrack_epay_verify(array $params, $merchantKey)
     }
 
     return hash_equals($expected, strtolower((string) $params['sign']));
+}
+
+function whmcs_peakrack_epay_clean_rsa_key($key)
+{
+    $key = trim((string) $key);
+    if ($key === '') {
+        return '';
+    }
+
+    $key = str_replace(["\r\n", "\r"], "\n", $key);
+    $key = preg_replace('/^\xEF\xBB\xBF/', '', $key);
+
+    return trim((string) $key);
+}
+
+function whmcs_peakrack_epay_rsa_pem_candidates($key, $type)
+{
+    $key = whmcs_peakrack_epay_clean_rsa_key($key);
+    if ($key === '') {
+        return [];
+    }
+
+    if (strpos($key, '-----BEGIN ') !== false) {
+        return [$key];
+    }
+
+    $body = preg_replace('/\s+/', '', $key);
+    if ($body === '') {
+        return [];
+    }
+
+    $body = chunk_split($body, 64, "\n");
+    if ($type === 'private') {
+        return [
+            "-----BEGIN PRIVATE KEY-----\n" . $body . "-----END PRIVATE KEY-----",
+            "-----BEGIN RSA PRIVATE KEY-----\n" . $body . "-----END RSA PRIVATE KEY-----",
+        ];
+    }
+
+    return [
+        "-----BEGIN PUBLIC KEY-----\n" . $body . "-----END PUBLIC KEY-----",
+        "-----BEGIN RSA PUBLIC KEY-----\n" . $body . "-----END RSA PUBLIC KEY-----",
+    ];
+}
+
+function whmcs_peakrack_epay_rsa_sign(array $params, $merchantPrivateKey)
+{
+    if (!function_exists('openssl_sign') || !function_exists('openssl_pkey_get_private')) {
+        throw new RuntimeException('PHP OpenSSL extension is not available.');
+    }
+
+    $content = whmcs_peakrack_epay_build_sign_content($params);
+    foreach (whmcs_peakrack_epay_rsa_pem_candidates($merchantPrivateKey, 'private') as $candidate) {
+        $privateKey = @openssl_pkey_get_private($candidate);
+        if ($privateKey === false) {
+            continue;
+        }
+
+        $signature = '';
+        if (@openssl_sign($content, $signature, $privateKey, OPENSSL_ALGO_SHA256)) {
+            return base64_encode($signature);
+        }
+    }
+
+    throw new RuntimeException('Merchant RSA private key is invalid.');
+}
+
+function whmcs_peakrack_epay_rsa_verify(array $params, $platformPublicKey)
+{
+    if (empty($params['sign']) || !function_exists('openssl_verify') || !function_exists('openssl_pkey_get_public')) {
+        return false;
+    }
+
+    $signature = base64_decode(str_replace(' ', '+', trim((string) $params['sign'])), true);
+    if ($signature === false) {
+        return false;
+    }
+
+    $content = whmcs_peakrack_epay_build_sign_content($params);
+    foreach (whmcs_peakrack_epay_rsa_pem_candidates($platformPublicKey, 'public') as $candidate) {
+        $publicKey = @openssl_pkey_get_public($candidate);
+        if ($publicKey === false) {
+            continue;
+        }
+
+        if (@openssl_verify($content, $signature, $publicKey, OPENSSL_ALGO_SHA256) === 1) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function whmcs_peakrack_epay_verify_callback(array $params, array $gatewayParams)
+{
+    $signType = strtolower(preg_replace('/[^a-z0-9]/', '', (string) ($params['sign_type'] ?? '')));
+    $tryRsa = in_array($signType, ['rsa', 'rsa2', 'sha256withrsa'], true);
+    $tryMd5 = $signType === 'md5';
+
+    if (!$tryRsa && !$tryMd5) {
+        $tryRsa = whmcs_peakrack_epay_is_v2_mode($gatewayParams);
+        $tryMd5 = true;
+    }
+
+    if ($tryRsa
+        && !empty($gatewayParams['platformPublicKey'])
+        && whmcs_peakrack_epay_rsa_verify($params, $gatewayParams['platformPublicKey'])
+    ) {
+        return true;
+    }
+
+    if ($tryMd5
+        && !empty($gatewayParams['merchantKey'])
+        && whmcs_peakrack_epay_verify($params, $gatewayParams['merchantKey'])
+    ) {
+        return true;
+    }
+
+    return false;
 }
 
 function whmcs_peakrack_epay_format_amount($amount)

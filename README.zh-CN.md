@@ -1,13 +1,14 @@
 # WHMCS PeakRack 易支付网关
 
-用于 WHMCS 9.x 的易支付兼容网关模块，支持 V1 `submit.php` 页面跳转支付、MD5 签名、异步通知回调，以及 WHMCS 多币种转换为人民币支付。
+用于 WHMCS 9.x 的易支付兼容网关模块，支持 V1 `submit.php` 页面跳转支付、MD5 签名、V2/RSA 兼容签名、异步通知回调，以及 WHMCS 多币种转换为人民币支付。
 
 English documentation: [README.md](README.md)
 
 ## 功能
 
 - 易支付 V1 页面跳转支付 `submit.php`
-- MD5 请求签名和回调验签
+- V1/MD5 请求签名和回调验签
+- V2/RSA 兼容模式签名，支持 `timestamp` 和 SHA256WithRSA
 - 支持后台同时启用 `alipay`、`wxpay`、`qqpay`、`bank`、收银台或自定义类型，客户付款时再选择具体方式
 - WHMCS 发票回调入账
 - 支持 WHMCS `Convert To For Processing = CNY`
@@ -18,12 +19,14 @@ English documentation: [README.md](README.md)
 ## 环境要求
 
 - WHMCS 9.x 自托管安装
-- 易支付兼容 V1/MD5 的商户账号
+- 易支付兼容商户账号
 - 商户 ID / PID
-- 商户密钥 / KEY
+- V1/MD5 使用的商户密钥 / KEY
+- 启用 V2/RSA 时，PHP 需要 OpenSSL 扩展
+- 启用 V2/RSA 时，需要商户 RSA 私钥和平台公钥
 - WHMCS 站点可通过公网 HTTPS 访问
 
-本模块对接常见 V1 MD5 易支付接口，不包含新版 RSA V2 API。
+本模块的 V2 支持面向“页面跳转兼容模式”：仍然把客户提交到 `submit.php`，但会增加 `timestamp` 并使用 RSA 签名，适合易支付后台开启 MD5+RSA 兼容签名的场景。
 
 ## 安装
 
@@ -52,8 +55,11 @@ modules/gateways/callback/peakrack_epay.php
 填写以下字段：
 
 - `Submit URL`，例如 `https://pay.example.com/`；从易支付后台复制出来的尾部 `/` 可以保留，模块会自动拼接 `submit.php`
+- `签名方式`：默认使用 `V1 / MD5`；需要 RSA 时选择 `V2 / RSA`
 - `商户 ID / PID`
-- `商户密钥 / KEY`
+- `商户密钥 / KEY`：V1/MD5 必填；V2 兼容模式下可作为 MD5 回调备用验签
+- `商户私钥 / PRIVATE KEY`：V2/RSA 必填；这里填写生成密钥对时得到的商户私钥，不是商户公钥
+- `平台公钥`：V2/RSA 必填，用于回调验签
 - 勾选要启用的支付方式，例如支付宝、微信支付、QQ 钱包、网银支付或收银台
 - `自定义支付类型`，可选；多个用英文逗号分隔，例如 `usdt,paypal`
 - `订单号前缀`
@@ -91,11 +97,21 @@ https://你的WHMCS域名/modules/gateways/callback/peakrack_epay.php?return=1
 
 ## 签名说明
 
-模块会把所有非空参数按参数名 ASCII 升序排列，排除 `sign` 和 `sign_type`，拼接为 `key=value&key=value`，末尾追加商户密钥后计算小写 MD5。
+模块会把所有非空参数按参数名 ASCII 升序排列，排除 `sign` 和 `sign_type`，拼接为 `key=value&key=value`。
 
-回调会使用同一规则验签。只有 `trade_status=TRADE_SUCCESS` 或兼容成功状态的回调会入账。
+`V1 / MD5` 模式会在待签名字符串末尾追加商户密钥后计算小写 MD5。
+
+`V2 / RSA` 模式会增加 `timestamp`，再使用商户私钥对待签名字符串做 SHA256WithRSA 签名，签名结果 Base64 后提交 `sign_type=RSA`。
+
+回调会按回传的 `sign_type` 验签：RSA 回调用平台公钥验签，MD5 回调用商户密钥验签。只有 `trade_status=TRADE_SUCCESS` 或兼容成功状态的回调会入账。
 
 ## 更新记录
+
+### 2.0.0
+
+- 增加 `签名方式` 配置，可选择 V1/MD5 或 V2/RSA。
+- 增加 V2/RSA 请求签名：自动提交 `timestamp`，使用商户私钥做 SHA256WithRSA 签名，并用平台公钥验签回调。
+- V1/MD5 仍然是默认模式，老安装不需要强制迁移。
 
 ### 1.0.2
 

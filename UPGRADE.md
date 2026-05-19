@@ -1,5 +1,21 @@
 # Upgrade Notes
 
+## 2.0.0
+
+No database migration is required.
+
+Existing installations remain on `V1 / MD5` unless you switch the new `Signature Mode` setting.
+
+To enable V2/RSA:
+
+- Confirm PHP OpenSSL is enabled on the WHMCS server.
+- Set `Signature Mode` to `V2 / RSA`.
+- Fill `Merchant Private Key` with the private key generated from the EPay RSA key pair.
+- Fill `Platform Public Key` with the platform public key from the EPay API information page.
+- Keep `Merchant Key` if the EPay account is in MD5+RSA compatibility mode and may send MD5 callbacks.
+
+The module still submits hosted payments to `submit.php`; V2/RSA mode adds `timestamp`, signs with SHA256WithRSA, and verifies RSA callbacks with the platform public key.
+
 ## 1.0.2
 
 No database migration is required.

@@ -1,13 +1,14 @@
 # WHMCS PeakRack EPay Gateway
 
-WHMCS payment gateway for EPay-compatible V1 hosted payment providers using `submit.php` and MD5 signatures.
+WHMCS payment gateway for EPay-compatible hosted payment providers using `submit.php`, V1/MD5 signatures, and V2/RSA compatible signatures.
 
 中文说明见 [README.zh-CN.md](README.zh-CN.md).
 
 ## Features
 
 - Hosted payment form submission to an EPay `submit.php` endpoint
-- MD5 request signing and callback signature verification
+- V1/MD5 request signing and callback signature verification
+- V2/RSA compatible-mode signing with `timestamp` and SHA256WithRSA
 - Allows multiple enabled payment methods such as `alipay`, `wxpay`, `qqpay`, `bank`, provider cashier routing, and custom provider types
 - WHMCS invoice payment callback integration
 - CNY gateway amount verification for converted invoices
@@ -17,12 +18,14 @@ WHMCS payment gateway for EPay-compatible V1 hosted payment providers using `sub
 ## Requirements
 
 - WHMCS 9.x self-hosted installation
-- EPay-compatible V1 provider account
+- EPay-compatible provider account
 - Merchant ID / PID
-- Merchant key for MD5 signing
+- Merchant key for V1/MD5 signing
+- PHP OpenSSL extension when V2/RSA mode is enabled
+- Merchant RSA private key and platform public key when V2/RSA mode is enabled
 - Public HTTPS WHMCS callback URL
 
-This module targets the common V1 MD5 EPay contract. It does not implement newer RSA-based V2 APIs.
+V2 support in this module targets the hosted-payment compatible flow: it still submits the customer to `submit.php`, but signs the payload with RSA and adds `timestamp` for providers that enable MD5+RSA compatibility mode.
 
 ## Installation
 
@@ -51,8 +54,11 @@ Then enable `PeakRack EPay (易支付)` in WHMCS payment gateways.
 Fill in the gateway settings:
 
 - `Submit URL`, for example `https://pay.example.com/`; a copied trailing slash may be kept and the module appends `submit.php`
+- `Signature Mode`: use `V1 / MD5` by default, or `V2 / RSA` for RSA-compatible providers
 - `Merchant ID / PID`
-- `Merchant Key`
+- `Merchant Key` for V1/MD5, and optionally for MD5 callback fallback in compatible mode
+- `Merchant Private Key` for V2/RSA; paste the private key generated with your RSA key pair, not the merchant public key
+- `Platform Public Key` for V2/RSA callback verification
 - enabled payment methods, for example Alipay, WeChat Pay, QQ Wallet, online banking, or cashier
 - `Custom Payment Types`, optional; separate multiple type codes with commas, for example `usdt,paypal`
 - `Order Prefix`
@@ -84,11 +90,21 @@ The WHMCS site must be publicly reachable by the EPay provider over HTTPS.
 
 ## Signature Notes
 
-The module signs all non-empty request parameters except `sign` and `sign_type`, sorted by ASCII key order, then appends the merchant key and calculates a lowercase MD5 hash.
+The module signs all non-empty request parameters except `sign` and `sign_type`, sorted by ASCII key order.
 
-Callbacks are verified using the same rule. Only successful callbacks with `trade_status=TRADE_SUCCESS` or a compatible success status are applied.
+In `V1 / MD5` mode, the module appends the merchant key and calculates a lowercase MD5 hash.
+
+In `V2 / RSA` mode, the module adds `timestamp`, signs the sorted parameter string with the merchant private key using SHA256WithRSA, base64-encodes the signature, and submits `sign_type=RSA`.
+
+Callbacks are verified using the same selected signature type. RSA callbacks are verified with the platform public key; MD5 callbacks are verified with the merchant key. Only successful callbacks with `trade_status=TRADE_SUCCESS` or a compatible success status are applied.
 
 ## Release Notes
+
+### 2.0.0
+
+- Added `Signature Mode` with V1/MD5 and V2/RSA options.
+- Added V2/RSA signing with `timestamp`, SHA256WithRSA, merchant private key support, and platform-public-key callback verification.
+- Kept V1/MD5 as the default mode for existing installations.
 
 ### 1.0.2
 

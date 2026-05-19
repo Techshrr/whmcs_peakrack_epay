@@ -59,12 +59,12 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
     $texts = [
         'zh' => [
             'admin_title' => 'PeakRack 易支付网关配置',
-            'admin_subtitle' => '用于兼容易支付 V1/MD5 的页面跳转支付接口。请填写易支付平台提供的商户 ID、商户密钥和 submit.php 地址。',
-            'version_badge' => '版本 1.0.2',
+            'admin_subtitle' => '用于兼容易支付 V1/MD5 与 V2/RSA 的页面跳转支付接口。请填写易支付平台提供的商户 ID、密钥和 submit.php 地址。',
+            'version_badge' => '版本 2.0.0',
             'language_zh' => '中文',
             'language_en' => 'English',
             'credentials_title' => '易支付凭据',
-            'credentials_desc' => 'Submit URL 通常是易支付站点的 /submit.php。商户密钥只用于 MD5 签名，请勿公开。',
+            'credentials_desc' => 'Submit URL 通常是易支付站点的 /submit.php。V1 使用 MD5 密钥；V2 使用商户私钥签名、平台公钥验签。',
             'order_title' => '订单与展示',
             'order_desc' => '控制客户前台可选择的支付方式、商户订单号前缀和易支付页面展示的网站名称。',
             'security_title' => '金额校验与回调',
@@ -74,10 +74,16 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
             'submit_url' => 'Submit URL',
             'language_switch' => '后台语言',
             'submit_url_desc' => '易支付页面跳转支付地址，例如 https://pay.example.com/。复制接口地址时尾部斜杠可保留，模块会自动追加 submit.php。',
+            'api_version' => '签名方式',
+            'api_version_desc' => '默认使用 V1 / MD5。选择 V2 / RSA 时，付款请求会增加 timestamp，并使用商户私钥进行 SHA256WithRSA 签名。',
             'merchant_id' => '商户 ID / PID',
             'merchant_id_desc' => '易支付商户后台提供的 pid。',
             'merchant_key' => '商户密钥 / KEY',
-            'merchant_key_desc' => '易支付商户后台提供的 MD5 签名密钥。',
+            'merchant_key_desc' => '易支付商户后台提供的 MD5 签名密钥。V1 必填；V2 兼容模式下可作为 MD5 回调备用验签。',
+            'merchant_private_key' => '商户私钥 / PRIVATE KEY',
+            'merchant_private_key_desc' => 'V2/RSA 必填。这里填写生成密钥对时得到的商户私钥，不是商户公钥；商户公钥需要填到易支付后台。',
+            'platform_public_key' => '平台公钥',
+            'platform_public_key_desc' => 'V2/RSA 必填。填写易支付 API 信息页展示的平台公钥，用于验签回调。',
             'enable_alipay' => '启用支付宝',
             'enable_alipay_desc' => '客户前台显示支付宝付款按钮，提交 type=alipay。',
             'enable_wxpay' => '启用微信支付',
@@ -99,12 +105,12 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
         ],
         'en' => [
             'admin_title' => 'PeakRack EPay Gateway Configuration',
-            'admin_subtitle' => 'Configure EPay-compatible V1/MD5 hosted payment. Enter the merchant ID, merchant key, and submit.php URL from your EPay provider.',
-            'version_badge' => 'Version 1.0.2',
+            'admin_subtitle' => 'Configure EPay-compatible V1/MD5 and V2/RSA hosted payment. Enter the merchant ID, keys, and submit.php URL from your EPay provider.',
+            'version_badge' => 'Version 2.0.0',
             'language_zh' => '中文',
             'language_en' => 'English',
             'credentials_title' => 'EPay Credentials',
-            'credentials_desc' => 'Submit URL is usually the provider /submit.php endpoint. The merchant key is only used for MD5 signatures and must remain private.',
+            'credentials_desc' => 'Submit URL is usually the provider /submit.php endpoint. V1 uses the MD5 merchant key; V2 signs with the merchant private key and verifies callbacks with the platform public key.',
             'order_title' => 'Order and Display',
             'order_desc' => 'Controls the payment methods customers can choose, merchant order prefix, and site name shown by the EPay provider.',
             'security_title' => 'Amount Verification and Callback',
@@ -114,10 +120,16 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
             'submit_url' => 'Submit URL',
             'language_switch' => 'Admin Language',
             'submit_url_desc' => 'Hosted payment endpoint, for example https://pay.example.com/. A copied trailing slash may be kept; the module appends submit.php automatically.',
+            'api_version' => 'Signature Mode',
+            'api_version_desc' => 'Default is V1 / MD5. V2 / RSA adds timestamp and signs payment requests with SHA256WithRSA using the merchant private key.',
             'merchant_id' => 'Merchant ID / PID',
             'merchant_id_desc' => 'pid from the EPay merchant dashboard.',
             'merchant_key' => 'Merchant Key',
-            'merchant_key_desc' => 'MD5 signing key from the EPay merchant dashboard.',
+            'merchant_key_desc' => 'MD5 signing key from the EPay merchant dashboard. Required for V1 and used as an MD5 callback fallback in compatible V2 mode.',
+            'merchant_private_key' => 'Merchant Private Key',
+            'merchant_private_key_desc' => 'Required for V2/RSA. Paste the merchant private key generated with the RSA key pair, not the merchant public key. Upload the merchant public key to the EPay dashboard.',
+            'platform_public_key' => 'Platform Public Key',
+            'platform_public_key_desc' => 'Required for V2/RSA. Paste the platform public key from the EPay API information page to verify callbacks.',
             'enable_alipay' => 'Enable Alipay',
             'enable_alipay_desc' => 'Show an Alipay button to customers and submit type=alipay.',
             'enable_wxpay' => 'Enable WeChat Pay',
@@ -260,6 +272,13 @@ function peakrack_epay_config()
             'Default' => '',
             'Description' => $t('submit_url_desc') . '<br>' . $t('language_switch') . ' ' . whmcs_peakrack_epay_admin_language_links($language),
         ],
+        'apiVersion' => [
+            'FriendlyName' => $t('api_version'),
+            'Type' => 'dropdown',
+            'Options' => 'V1 / MD5,V2 / RSA',
+            'Default' => 'V1 / MD5',
+            'Description' => $t('api_version_desc'),
+        ],
         'merchantId' => [
             'FriendlyName' => $t('merchant_id'),
             'Type' => 'text',
@@ -273,6 +292,22 @@ function peakrack_epay_config()
             'Size' => '64',
             'Default' => '',
             'Description' => $t('merchant_key_desc'),
+        ],
+        'merchantPrivateKey' => [
+            'FriendlyName' => $t('merchant_private_key'),
+            'Type' => 'textarea',
+            'Rows' => '7',
+            'Cols' => '80',
+            'Default' => '',
+            'Description' => $t('merchant_private_key_desc'),
+        ],
+        'platformPublicKey' => [
+            'FriendlyName' => $t('platform_public_key'),
+            'Type' => 'textarea',
+            'Rows' => '5',
+            'Cols' => '80',
+            'Default' => '',
+            'Description' => $t('platform_public_key_desc'),
         ],
         'orderSection' => whmcs_peakrack_epay_admin_section($language, 'order_title', 'order_desc'),
         'enableAlipay' => [
@@ -336,13 +371,26 @@ function peakrack_epay_config()
 
 function peakrack_epay_link($params)
 {
-    foreach (['submitUrl', 'merchantId', 'merchantKey'] as $requiredField) {
+    $apiMode = whmcs_peakrack_epay_api_mode($params);
+    $requiredFields = ['submitUrl', 'merchantId'];
+    if ($apiMode === 'v2_rsa') {
+        $requiredFields[] = 'merchantPrivateKey';
+        $requiredFields[] = 'platformPublicKey';
+    } else {
+        $requiredFields[] = 'merchantKey';
+    }
+
+    foreach ($requiredFields as $requiredField) {
         if (empty($params[$requiredField])) {
             return whmcs_peakrack_epay_alert(
                 'warning',
                 whmcs_peakrack_epay_lang('missing_config', $params, ['field' => $requiredField])
             );
         }
+    }
+
+    if ($apiMode === 'v2_rsa' && (!function_exists('openssl_sign') || !function_exists('openssl_pkey_get_private'))) {
+        return whmcs_peakrack_epay_alert('warning', whmcs_peakrack_epay_lang('openssl_missing', $params));
     }
 
     $submitUrl = whmcs_peakrack_epay_normalize_submit_url($params['submitUrl']);
@@ -501,15 +549,28 @@ function peakrack_epay_link($params)
             $requestParams['type'] = $paymentType;
         }
 
-        try {
-            $requestParams['sign'] = whmcs_peakrack_epay_sign($requestParams, $params['merchantKey']);
-        } catch (Throwable $e) {
-            return whmcs_peakrack_epay_alert(
-                'danger',
-                whmcs_peakrack_epay_lang('signing_failed', $params, ['message' => $e->getMessage()])
-            );
+        if ($apiMode === 'v2_rsa') {
+            $requestParams['timestamp'] = (string) time();
+            try {
+                $requestParams['sign'] = whmcs_peakrack_epay_rsa_sign($requestParams, $params['merchantPrivateKey']);
+            } catch (Throwable $e) {
+                return whmcs_peakrack_epay_alert(
+                    'danger',
+                    whmcs_peakrack_epay_lang('signing_failed', $params, ['message' => $e->getMessage()])
+                );
+            }
+            $requestParams['sign_type'] = 'RSA';
+        } else {
+            try {
+                $requestParams['sign'] = whmcs_peakrack_epay_sign($requestParams, $params['merchantKey']);
+            } catch (Throwable $e) {
+                return whmcs_peakrack_epay_alert(
+                    'danger',
+                    whmcs_peakrack_epay_lang('signing_failed', $params, ['message' => $e->getMessage()])
+                );
+            }
+            $requestParams['sign_type'] = 'MD5';
         }
-        $requestParams['sign_type'] = 'MD5';
 
         $buttonLabel = whmcs_peakrack_epay_payment_type_label($paymentType, $params);
 
