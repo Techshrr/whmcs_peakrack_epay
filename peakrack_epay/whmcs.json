@@ -1,0 +1,29 @@
+{
+  "schema": "1.0",
+  "type": "whmcs-gateways",
+  "name": "peakrack_epay",
+  "version": "1.0.2",
+  "license": "MIT",
+  "category": "payments",
+  "description": {
+    "name": "PeakRack EPay (易支付)",
+    "tagline": "Accept CNY payments through EPay-compatible V1 MD5 hosted payment.",
+    "long": "A WHMCS payment gateway for EPay-compatible V1 hosted payment providers. It supports MD5 request signing, signed payment callbacks, optional cashier routing, and WHMCS currency conversion to CNY.",
+    "features": [
+      "EPay-compatible V1 submit.php hosted payment",
+      "Customer-facing payment method chooser for Alipay, WeChat Pay, QQ Wallet, bank, cashier, and custom provider types",
+      "Copy-paste friendly Submit URL handling with optional trailing slash",
+      "MD5 request and callback signature verification",
+      "Risk-style admin language buttons for Chinese and English gateway configuration labels",
+      "CNY amount verification for converted WHMCS invoices"
+    ]
+  },
+  "support": {
+    "docs_url": "https://www.jiangcen.cn/doc/v1_legacy_api.html"
+  },
+  "authors": [
+    {
+      "name": "PeakRack Custom Module"
+    }
+  ]
+}
