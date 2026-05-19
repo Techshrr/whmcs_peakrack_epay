@@ -8,7 +8,7 @@
   "description": {
     "name": "PeakRack EPay (易支付)",
     "tagline": "Accept CNY payments through EPay-compatible V1 MD5 and V2 RSA hosted payment.",
-    "long": "A WHMCS payment gateway for EPay-compatible hosted payment providers. It supports V1 MD5 request signing, V2 RSA compatible signing, signed payment callbacks, optional cashier routing, and WHMCS currency conversion to CNY.",
+    "long": "A WHMCS payment gateway for EPay-compatible hosted payment providers. It supports V1 MD5 request signing, V2 RSA compatible signing, signed payment callbacks, optional cashier routing, and WHMCS currency conversion to CNY. Public example provider: 互六鼎付 at https://pay.idcli.com/.",
     "features": [
       "EPay-compatible submit.php hosted payment",
       "Customer-facing payment method chooser for Alipay, WeChat Pay, QQ Wallet, bank, cashier, and custom provider types",

@@ -4,6 +4,8 @@
 
 English documentation: [README.md](README.md)
 
+公开示例易支付站：[互六鼎付](https://pay.idcli.com/)（`Submit URL`：`https://pay.idcli.com/`）。
+
 ## 功能
 
 - 易支付 V1 页面跳转支付 `submit.php`
@@ -54,7 +56,7 @@ modules/gateways/callback/peakrack_epay.php
 
 填写以下字段：
 
-- `Submit URL`，例如 `https://pay.example.com/`；从易支付后台复制出来的尾部 `/` 可以保留，模块会自动拼接 `submit.php`
+- `Submit URL`，例如 `https://pay.idcli.com/`；从易支付后台复制出来的尾部 `/` 可以保留，模块会自动拼接 `submit.php`
 - `签名方式`：默认使用 `V1 / MD5`；需要 RSA 时选择 `V2 / RSA`
 - `商户 ID / PID`
 - `商户密钥 / KEY`：V1/MD5 必填；V2 兼容模式下可作为 MD5 回调备用验签
@@ -116,7 +118,7 @@ https://你的WHMCS域名/modules/gateways/callback/peakrack_epay.php?return=1
 ### 1.0.2
 
 - 恢复后台中文 / English 即时切换按钮，并挂到 `Submit URL` 说明行，避免恢复无实际即时作用的保存型下拉框。
-- 优化 `Submit URL` 处理：从易支付后台复制 `https://pay.example.com/` 不需要删除尾部斜杠。
+- 优化 `Submit URL` 处理：从易支付后台复制 `https://pay.idcli.com/` 不需要删除尾部斜杠。
 - 优化客户付款页和查看账单侧栏的支付按钮布局，改用内置 SVG 图标，不再用首字方块替代。
 
 ### 1.0.1

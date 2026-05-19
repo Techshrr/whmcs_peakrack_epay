@@ -4,6 +4,8 @@ WHMCS payment gateway for EPay-compatible hosted payment providers using `submit
 
 中文说明见 [README.zh-CN.md](README.zh-CN.md).
 
+Public example EPay provider: [互六鼎付](https://pay.idcli.com/) (`Submit URL`: `https://pay.idcli.com/`).
+
 ## Features
 
 - Hosted payment form submission to an EPay `submit.php` endpoint
@@ -53,7 +55,7 @@ Then enable `PeakRack EPay (易支付)` in WHMCS payment gateways.
 
 Fill in the gateway settings:
 
-- `Submit URL`, for example `https://pay.example.com/`; a copied trailing slash may be kept and the module appends `submit.php`
+- `Submit URL`, for example `https://pay.idcli.com/`; a copied trailing slash may be kept and the module appends `submit.php`
 - `Signature Mode`: use `V1 / MD5` by default, or `V2 / RSA` for RSA-compatible providers
 - `Merchant ID / PID`
 - `Merchant Key` for V1/MD5, and optionally for MD5 callback fallback in compatible mode
@@ -109,7 +111,7 @@ Callbacks are verified using the same selected signature type. RSA callbacks are
 ### 1.0.2
 
 - Restored the immediate Chinese/English admin switch buttons by attaching them to the `Submit URL` help row.
-- Improved `Submit URL` handling so copied provider URLs such as `https://pay.example.com/` do not need the trailing slash removed.
+- Improved `Submit URL` handling so copied provider URLs such as `https://pay.idcli.com/` do not need the trailing slash removed.
 - Improved customer payment and invoice-sidebar button layout with built-in SVG icons instead of first-character badges.
 
 ### 1.0.1
