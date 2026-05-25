@@ -1,5 +1,15 @@
 # Upgrade Notes
 
+## 2.0.1
+
+No database migration is required.
+
+The gateway admin page now changes the key fields shown for the selected `Signature Mode`:
+
+- `V1 / MD5` shows and requires `Merchant Key`.
+- `V2 / RSA` shows and requires `Merchant Private Key` and `Platform Public Key`.
+- Hidden fields are not disabled, so WHMCS keeps their saved values when you switch modes and save.
+
 ## 2.0.0
 
 No database migration is required.
@@ -21,7 +31,7 @@ The module still submits hosted payments to `submit.php`; V2/RSA mode adds `time
 No database migration is required.
 
 - The Chinese/English admin switch buttons now appear in the `Submit URL` help row.
-- `Submit URL` accepts copied provider roots with a trailing slash, such as `https://pay.example.com/`.
+- `Submit URL` accepts copied provider roots with a trailing slash, such as `https://pay.idcli.com/`.
 - Customer-facing payment buttons use built-in SVG icons and a compact responsive layout.
 
 ## 1.0.1

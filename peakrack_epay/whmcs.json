@@ -2,7 +2,7 @@
   "schema": "1.0",
   "type": "whmcs-gateways",
   "name": "peakrack_epay",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": "MIT",
   "category": "payments",
   "description": {
@@ -15,6 +15,7 @@
       "Copy-paste friendly Submit URL handling with optional trailing slash",
       "V1 MD5 request and callback signature verification",
       "V2 RSA compatible signing with timestamp and platform-public-key callback verification",
+      "Signature-mode-aware admin key field visibility and validation",
       "Risk-style admin language buttons for Chinese and English gateway configuration labels",
       "CNY amount verification for converted WHMCS invoices"
     ]

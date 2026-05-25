@@ -60,7 +60,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
         'zh' => [
             'admin_title' => 'PeakRack 易支付网关配置',
             'admin_subtitle' => '用于兼容易支付 V1/MD5 与 V2/RSA 的页面跳转支付接口。请填写易支付平台提供的商户 ID、密钥和 submit.php 地址。',
-            'version_badge' => '版本 2.0.0',
+            'version_badge' => '版本 2.0.1',
             'language_zh' => '中文',
             'language_en' => 'English',
             'credentials_title' => '易支付凭据',
@@ -73,7 +73,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
             'help_desc' => '回调地址为 modules/gateways/callback/peakrack_epay.php。多币种站点请把此网关的 Convert To For Processing 设置为 CNY。',
             'submit_url' => 'Submit URL',
             'language_switch' => '后台语言',
-            'submit_url_desc' => '易支付页面跳转支付地址，例如 https://pay.example.com/。复制接口地址时尾部斜杠可保留，模块会自动追加 submit.php。',
+            'submit_url_desc' => '易支付页面跳转支付地址，例如 https://pay.idcli.com/。复制接口地址时尾部斜杠可保留，模块会自动追加 submit.php。',
             'api_version' => '签名方式',
             'api_version_desc' => '默认使用 V1 / MD5。选择 V2 / RSA 时，付款请求会增加 timestamp，并使用商户私钥进行 SHA256WithRSA 签名。',
             'merchant_id' => '商户 ID / PID',
@@ -84,6 +84,8 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
             'merchant_private_key_desc' => 'V2/RSA 必填。这里填写生成密钥对时得到的商户私钥，不是商户公钥；商户公钥需要填到易支付后台。',
             'platform_public_key' => '平台公钥',
             'platform_public_key_desc' => 'V2/RSA 必填。填写易支付 API 信息页展示的平台公钥，用于验签回调。',
+            'mode_validation_v1' => '选择 V1 / MD5 时，商户密钥 / KEY 不能为空。',
+            'mode_validation_v2' => '选择 V2 / RSA 时，商户私钥 / PRIVATE KEY 和平台公钥不能为空。',
             'enable_alipay' => '启用支付宝',
             'enable_alipay_desc' => '客户前台显示支付宝付款按钮，提交 type=alipay。',
             'enable_wxpay' => '启用微信支付',
@@ -106,7 +108,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
         'en' => [
             'admin_title' => 'PeakRack EPay Gateway Configuration',
             'admin_subtitle' => 'Configure EPay-compatible V1/MD5 and V2/RSA hosted payment. Enter the merchant ID, keys, and submit.php URL from your EPay provider.',
-            'version_badge' => 'Version 2.0.0',
+            'version_badge' => 'Version 2.0.1',
             'language_zh' => '中文',
             'language_en' => 'English',
             'credentials_title' => 'EPay Credentials',
@@ -119,7 +121,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
             'help_desc' => 'The callback endpoint is modules/gateways/callback/peakrack_epay.php. For multi-currency stores, set this gateway\'s Convert To For Processing option to CNY.',
             'submit_url' => 'Submit URL',
             'language_switch' => 'Admin Language',
-            'submit_url_desc' => 'Hosted payment endpoint, for example https://pay.example.com/. A copied trailing slash may be kept; the module appends submit.php automatically.',
+            'submit_url_desc' => 'Hosted payment endpoint, for example https://pay.idcli.com/. A copied trailing slash may be kept; the module appends submit.php automatically.',
             'api_version' => 'Signature Mode',
             'api_version_desc' => 'Default is V1 / MD5. V2 / RSA adds timestamp and signs payment requests with SHA256WithRSA using the merchant private key.',
             'merchant_id' => 'Merchant ID / PID',
@@ -130,6 +132,8 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
             'merchant_private_key_desc' => 'Required for V2/RSA. Paste the merchant private key generated with the RSA key pair, not the merchant public key. Upload the merchant public key to the EPay dashboard.',
             'platform_public_key' => 'Platform Public Key',
             'platform_public_key_desc' => 'Required for V2/RSA. Paste the platform public key from the EPay API information page to verify callbacks.',
+            'mode_validation_v1' => 'Merchant Key is required when V1 / MD5 is selected.',
+            'mode_validation_v2' => 'Merchant Private Key and Platform Public Key are required when V2 / RSA is selected.',
             'enable_alipay' => 'Enable Alipay',
             'enable_alipay_desc' => 'Show an Alipay button to customers and submit type=alipay.',
             'enable_wxpay' => 'Enable WeChat Pay',
@@ -228,6 +232,110 @@ function whmcs_peakrack_epay_admin_section(string $language, string $titleKey, s
     return whmcs_peakrack_epay_admin_system('<div class="prk-gw-section"><h4>' . $title . '</h4><p>' . $desc . '</p></div>');
 }
 
+function whmcs_peakrack_epay_admin_mode_script(string $language): array
+{
+    $v1Message = json_encode(
+        whmcs_peakrack_epay_admin_text($language, 'mode_validation_v1'),
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    );
+    $v2Message = json_encode(
+        whmcs_peakrack_epay_admin_text($language, 'mode_validation_v2'),
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    );
+
+    return whmcs_peakrack_epay_admin_system('<script>
+(function () {
+    function ready(callback) {
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", callback);
+            return;
+        }
+        callback();
+    }
+
+    function field(name) {
+        return document.querySelector("[name=\"field[" + name + "]\"],[name=\"" + name + "\"],[name$=\"[" + name + "]\"]");
+    }
+
+    function row(element) {
+        return element && element.closest ? element.closest("tr,.form-group,.fieldarea") : null;
+    }
+
+    function setRowVisible(element, visible) {
+        var target = row(element);
+        if (!target) {
+            return;
+        }
+        target.style.display = visible ? "" : "none";
+        target.setAttribute("data-prk-epay-mode-hidden", visible ? "0" : "1");
+    }
+
+    function isV2Mode(apiField) {
+        var value = String(apiField.value || "");
+        if (apiField.options && apiField.selectedIndex >= 0) {
+            value += " " + String(apiField.options[apiField.selectedIndex].text || "");
+        }
+        value = value.toLowerCase();
+        return value.indexOf("v2") !== -1 || value.indexOf("rsa") !== -1;
+    }
+
+    ready(function () {
+        var apiField = field("apiVersion");
+        var merchantKey = field("merchantKey");
+        var merchantPrivateKey = field("merchantPrivateKey");
+        var platformPublicKey = field("platformPublicKey");
+
+        if (!apiField || !merchantKey || !merchantPrivateKey || !platformPublicKey) {
+            return;
+        }
+
+        function updateModeRows() {
+            var v2 = isV2Mode(apiField);
+            setRowVisible(merchantKey, !v2);
+            setRowVisible(merchantPrivateKey, v2);
+            setRowVisible(platformPublicKey, v2);
+        }
+
+        function valueIsEmpty(element) {
+            return String(element.value || "").replace(/\s+/g, "") === "";
+        }
+
+        apiField.addEventListener("change", updateModeRows);
+        updateModeRows();
+
+        var form = apiField.form || apiField.closest("form");
+        if (!form) {
+            return;
+        }
+
+        form.addEventListener("submit", function (event) {
+            var v2 = isV2Mode(apiField);
+            updateModeRows();
+
+            if (!v2 && valueIsEmpty(merchantKey)) {
+                event.preventDefault();
+                setRowVisible(merchantKey, true);
+                merchantKey.focus();
+                alert(' . $v1Message . ');
+                return false;
+            }
+
+            if (v2 && (valueIsEmpty(merchantPrivateKey) || valueIsEmpty(platformPublicKey))) {
+                event.preventDefault();
+                setRowVisible(merchantPrivateKey, true);
+                setRowVisible(platformPublicKey, true);
+                (valueIsEmpty(merchantPrivateKey) ? merchantPrivateKey : platformPublicKey).focus();
+                alert(' . $v2Message . ');
+                return false;
+            }
+
+            return true;
+        });
+    });
+})();
+</script>');
+}
+
 function whmcs_peakrack_epay_payment_layout_class(): string
 {
     $requestUri = strtolower((string) ($_SERVER['REQUEST_URI'] ?? ''));
@@ -309,6 +417,7 @@ function peakrack_epay_config()
             'Default' => '',
             'Description' => $t('platform_public_key_desc'),
         ],
+        'signatureModeUi' => whmcs_peakrack_epay_admin_mode_script($language),
         'orderSection' => whmcs_peakrack_epay_admin_section($language, 'order_title', 'order_desc'),
         'enableAlipay' => [
             'FriendlyName' => $t('enable_alipay'),
