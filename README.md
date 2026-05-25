@@ -74,8 +74,6 @@ Convert To For Processing = CNY
 
 WHMCS will convert the invoice amount to CNY before sending the customer to EPay. The callback verifies the returned CNY amount before applying the invoice payment.
 
-The admin form shows only the key fields needed by the selected signature mode. Existing hidden key values are preserved when switching modes, and the form blocks saving if the required key for the active mode is empty.
-
 ## Callback URL
 
 The module passes the asynchronous callback URL dynamically:
@@ -103,24 +101,6 @@ In `V2 / RSA` mode, the module adds `timestamp`, signs the sorted parameter stri
 Callbacks are verified using the same selected signature type. RSA callbacks are verified with the platform public key; MD5 callbacks are verified with the merchant key. Only successful callbacks with `trade_status=TRADE_SUCCESS` or a compatible success status are applied.
 
 ## Release Notes
-
-### 2.0.3
-
-- Added CSS-first signature-mode field hiding using `:has()` so WHMCS pages that inject gateway settings without executing inline scripts still hide the inactive key rows.
-- Added a row-order fallback for WHMCS installs that render gateway setting input names differently.
-- Kept the JavaScript toggle as an additional fallback for environments where inline scripts execute normally.
-
-### 2.0.2
-
-- Hardened the admin signature-mode field toggle for WHMCS installs that render gateway setting names in a different case or table structure.
-- The toggle now locates fields by setting name, visible row label, and V1/V2 option text, with delayed retries after page load.
-
-### 2.0.1
-
-- Added signature-mode-aware admin field visibility.
-- V1 / MD5 shows and requires only `Merchant Key`.
-- V2 / RSA shows and requires only `Merchant Private Key` and `Platform Public Key`.
-- Hidden key fields keep their saved values when switching modes.
 
 ### 2.0.0
 
