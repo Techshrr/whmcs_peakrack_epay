@@ -1,5 +1,11 @@
 # Upgrade Notes
 
+## 2.0.3
+
+No database migration is required.
+
+This release adds CSS-first field hiding for the admin `Signature Mode` selector. WHMCS can inject gateway settings into the page without executing inline scripts; the new CSS rules still hide RSA key rows in `V1 / MD5` mode and hide the MD5 merchant key row in `V2 / RSA` mode. A row-order fallback is included for installs that render gateway setting input names differently.
+
 ## 2.0.2
 
 No database migration is required.

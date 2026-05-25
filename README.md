@@ -104,6 +104,12 @@ Callbacks are verified using the same selected signature type. RSA callbacks are
 
 ## Release Notes
 
+### 2.0.3
+
+- Added CSS-first signature-mode field hiding using `:has()` so WHMCS pages that inject gateway settings without executing inline scripts still hide the inactive key rows.
+- Added a row-order fallback for WHMCS installs that render gateway setting input names differently.
+- Kept the JavaScript toggle as an additional fallback for environments where inline scripts execute normally.
+
 ### 2.0.2
 
 - Hardened the admin signature-mode field toggle for WHMCS installs that render gateway setting names in a different case or table structure.

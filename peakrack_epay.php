@@ -60,7 +60,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
         'zh' => [
             'admin_title' => 'PeakRack 易支付网关配置',
             'admin_subtitle' => '用于兼容易支付 V1/MD5 与 V2/RSA 的页面跳转支付接口。请填写易支付平台提供的商户 ID、密钥和 submit.php 地址。',
-            'version_badge' => '版本 2.0.2',
+            'version_badge' => '版本 2.0.3',
             'language_zh' => '中文',
             'language_en' => 'English',
             'credentials_title' => '易支付凭据',
@@ -108,7 +108,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
         'en' => [
             'admin_title' => 'PeakRack EPay Gateway Configuration',
             'admin_subtitle' => 'Configure EPay-compatible V1/MD5 and V2/RSA hosted payment. Enter the merchant ID, keys, and submit.php URL from your EPay provider.',
-            'version_badge' => 'Version 2.0.2',
+            'version_badge' => 'Version 2.0.3',
             'language_zh' => '中文',
             'language_en' => 'English',
             'credentials_title' => 'EPay Credentials',
@@ -220,6 +220,24 @@ function whmcs_peakrack_epay_admin_intro(string $language): array
 .prk-gw-section{box-sizing:border-box;border:1px solid #e7edf3;border-radius:6px;background:#fbfcfe;margin:8px 0;padding:12px 14px}
 .prk-gw-section h4{margin:0 0 4px;font-size:14px;font-weight:700;color:#111827}
 .prk-gw-section p{margin:0;color:#6b7280;font-size:12px;line-height:1.5}
+tr:has(select[name$="[apiVersion]" i] option:checked[value*="V1" i]) ~ tr:has(textarea[name$="[merchantPrivateKey]" i]),
+tr:has(select[name$="[apiVersion]" i] option:checked[value*="MD5" i]) ~ tr:has(textarea[name$="[merchantPrivateKey]" i]),
+tr:has(select[name$="[apiVersion]" i] option:checked[value*="V1" i]) ~ tr:has(textarea[name$="[platformPublicKey]" i]),
+tr:has(select[name$="[apiVersion]" i] option:checked[value*="MD5" i]) ~ tr:has(textarea[name$="[platformPublicKey]" i]),
+tr:has(select[name$="[apiversion]" i] option:checked[value*="V1" i]) ~ tr:has(textarea[name$="[merchantprivatekey]" i]),
+tr:has(select[name$="[apiversion]" i] option:checked[value*="MD5" i]) ~ tr:has(textarea[name$="[merchantprivatekey]" i]),
+tr:has(select[name$="[apiversion]" i] option:checked[value*="V1" i]) ~ tr:has(textarea[name$="[platformpublickey]" i]),
+tr:has(select[name$="[apiversion]" i] option:checked[value*="MD5" i]) ~ tr:has(textarea[name$="[platformpublickey]" i]),
+tr:has(select[name$="[apiVersion]" i] option:checked[value*="V2" i]) ~ tr:has(input[name$="[merchantKey]" i]),
+tr:has(select[name$="[apiVersion]" i] option:checked[value*="RSA" i]) ~ tr:has(input[name$="[merchantKey]" i]),
+tr:has(select[name$="[apiversion]" i] option:checked[value*="V2" i]) ~ tr:has(input[name$="[merchantkey]" i]),
+tr:has(select[name$="[apiversion]" i] option:checked[value*="RSA" i]) ~ tr:has(input[name$="[merchantkey]" i]),
+tr:has(select option:checked[value*="V1" i]) + tr + tr + tr,
+tr:has(select option:checked[value*="MD5" i]) + tr + tr + tr,
+tr:has(select option:checked[value*="V1" i]) + tr + tr + tr + tr,
+tr:has(select option:checked[value*="MD5" i]) + tr + tr + tr + tr,
+tr:has(select option:checked[value*="V2" i]) + tr + tr,
+tr:has(select option:checked[value*="RSA" i]) + tr + tr{display:none!important}
 @media (max-width:700px){.prk-gw-admin__head{display:block}.prk-gw-admin__badge{margin-top:10px}}
 </style><div class="prk-gw-admin"><div class="prk-gw-admin__head"><div><h3 class="prk-gw-admin__title">' . $title . '</h3><p class="prk-gw-admin__desc">' . $subtitle . '</p></div><div class="prk-gw-admin__actions"><span class="prk-gw-admin__badge">' . $badge . '</span><div class="prk-gw-lang"><a class="' . ($language === 'zh' ? 'active' : '') . '" href="' . $zhUrl . '">' . $zhLabel . '</a><a class="' . ($language === 'en' ? 'active' : '') . '" href="' . $enUrl . '">' . $enLabel . '</a></div></div></div></div>');
 }
