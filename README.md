@@ -89,7 +89,7 @@ https://your-whmcs.example/modules/gateways/callback/peakrack_epay.php
 The browser return URL is:
 
 ```text
-https://your-whmcs.example/modules/gateways/callback/peakrack_epay.php?return=1
+https://your-whmcs.example/modules/gateways/callback/peakrack_epay.php?return=1&invoiceid=INVOICE_ID
 ```
 
 The WHMCS site must be publicly reachable by the EPay provider over HTTPS.
@@ -102,9 +102,16 @@ In `V1 / MD5` mode, the module appends the merchant key and calculates a lowerca
 
 In `V2 / RSA` mode, the module adds `timestamp`, signs the sorted parameter string with the merchant private key using SHA256WithRSA, base64-encodes the signature, and submits `sign_type=RSA`.
 
-Callbacks are verified using the same selected signature type. RSA callbacks are verified with the platform public key; MD5 callbacks are verified with the merchant key. Only successful callbacks with `trade_status=TRADE_SUCCESS` or a compatible success status are applied.
+Callbacks are verified using the same selected signature type. RSA callbacks are verified with the platform public key; MD5 callbacks are verified with the merchant key. Only successful callbacks with `trade_status=TRADE_SUCCESS`, `TRADE_FINISHED`, or a compatible success status are applied.
 
 ## Release Notes
+
+### 2.1.1
+
+- Added a two-hour expiry to local payment-method selection tokens.
+- Prevented stale or already-paid invoice pages from creating a new provider order.
+- Hardened callbacks for additional common success statuses, transaction ID fields, and `total_amount`.
+- Added invoice-aware browser return handling so payment returns can still reach the invoice page if the provider omits callback parameters in the browser redirect.
 
 ### 2.1.0
 

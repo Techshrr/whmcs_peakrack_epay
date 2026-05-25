@@ -409,6 +409,28 @@ function whmcs_peakrack_epay_amounts_match($expected, $actual)
     return abs((float) $expected - (float) $actual) < 0.01;
 }
 
+function whmcs_peakrack_epay_invoice_balance($invoiceId)
+{
+    if (!function_exists('localAPI')) {
+        return null;
+    }
+
+    $invoice = localAPI('GetInvoice', ['invoiceid' => (int) $invoiceId]);
+    if (!is_array($invoice) || ($invoice['result'] ?? '') !== 'success') {
+        return null;
+    }
+
+    if (isset($invoice['balance'])) {
+        return whmcs_peakrack_epay_format_amount($invoice['balance']);
+    }
+
+    if (isset($invoice['total'])) {
+        return whmcs_peakrack_epay_format_amount($invoice['total']);
+    }
+
+    return null;
+}
+
 function whmcs_peakrack_epay_clean_display_text($value, $fallback = '')
 {
     $value = (string) $value;
@@ -546,30 +568,46 @@ function whmcs_peakrack_epay_selection_token_secret(array $params)
     return hash('sha256', 'peakrack_epay|' . (string) ($params['merchantId'] ?? ''));
 }
 
-function whmcs_peakrack_epay_selection_token_payload($invoiceId, $amount, $currency, $paymentType)
+function whmcs_peakrack_epay_selection_token_payload($invoiceId, $amount, $currency, $paymentType, $issuedAt = null)
 {
-    return implode('|', [
+    $parts = [
         (int) $invoiceId,
         whmcs_peakrack_epay_format_amount($amount),
         strtoupper((string) $currency),
         whmcs_peakrack_epay_normalize_payment_type($paymentType),
-    ]);
+    ];
+
+    if ($issuedAt !== null) {
+        $parts[] = (string) (int) $issuedAt;
+    }
+
+    return implode('|', $parts);
 }
 
-function whmcs_peakrack_epay_selection_token(array $params, $invoiceId, $amount, $currency, $paymentType)
+function whmcs_peakrack_epay_selection_token(array $params, $invoiceId, $amount, $currency, $paymentType, $issuedAt = null)
 {
     return hash_hmac(
         'sha256',
-        whmcs_peakrack_epay_selection_token_payload($invoiceId, $amount, $currency, $paymentType),
+        whmcs_peakrack_epay_selection_token_payload($invoiceId, $amount, $currency, $paymentType, $issuedAt),
         whmcs_peakrack_epay_selection_token_secret($params)
     );
 }
 
-function whmcs_peakrack_epay_verify_selection_token(array $params, $invoiceId, $amount, $currency, $paymentType, $token)
+function whmcs_peakrack_epay_verify_selection_token(array $params, $invoiceId, $amount, $currency, $paymentType, $token, $issuedAt = null)
 {
-    $expected = whmcs_peakrack_epay_selection_token($params, $invoiceId, $amount, $currency, $paymentType);
+    $expected = whmcs_peakrack_epay_selection_token($params, $invoiceId, $amount, $currency, $paymentType, $issuedAt);
 
     return hash_equals($expected, (string) $token);
+}
+
+function whmcs_peakrack_epay_selection_token_is_fresh($issuedAt, $ttlSeconds = 7200)
+{
+    $issuedAt = (int) $issuedAt;
+    if ($issuedAt <= 0) {
+        return false;
+    }
+
+    return abs(time() - $issuedAt) <= (int) $ttlSeconds;
 }
 
 function whmcs_peakrack_epay_payment_type_is_enabled($paymentType, array $params)
@@ -600,7 +638,7 @@ function whmcs_peakrack_epay_build_payment_request(array $params, $invoiceId, $a
     $requestParams = [
         'pid' => trim((string) ($params['merchantId'] ?? '')),
         'notify_url' => $callbackUrl,
-        'return_url' => $callbackUrl . '?return=1',
+        'return_url' => $callbackUrl . '?return=1&invoiceid=' . $invoiceId,
         'name' => whmcs_peakrack_epay_truncate($firstItem, 127),
         'money' => $amount,
         'param' => whmcs_peakrack_epay_build_param($invoiceId, $amount, 'CNY'),
@@ -699,13 +737,13 @@ function whmcs_peakrack_epay_decode_param($param)
 function whmcs_peakrack_epay_is_success_status(array $params)
 {
     $tradeStatus = strtoupper(trim((string) ($params['trade_status'] ?? '')));
-    if ($tradeStatus === 'TRADE_SUCCESS') {
+    if (in_array($tradeStatus, ['TRADE_SUCCESS', 'TRADE_FINISHED', 'SUCCESS', 'PAID'], true)) {
         return true;
     }
 
     $status = strtolower(trim((string) ($params['status'] ?? '')));
 
-    return in_array($status, ['1', 'success', 'trade_success'], true);
+    return in_array($status, ['1', 'success', 'trade_success', 'trade_finished', 'paid', 'complete', 'completed'], true);
 }
 
 function whmcs_peakrack_epay_render_hidden_inputs(array $params)

@@ -39,49 +39,32 @@ function whmcs_peakrack_epay_callback_transaction_exists($transactionId)
         ->exists();
 }
 
-function whmcs_peakrack_epay_callback_invoice_balance($invoiceId)
-{
-    if (!function_exists('localAPI')) {
-        return null;
-    }
-
-    $invoice = localAPI('GetInvoice', ['invoiceid' => (int) $invoiceId]);
-    if (!is_array($invoice) || ($invoice['result'] ?? '') !== 'success') {
-        return null;
-    }
-
-    if (isset($invoice['balance'])) {
-        return whmcs_peakrack_epay_format_amount($invoice['balance']);
-    }
-
-    if (isset($invoice['total'])) {
-        return whmcs_peakrack_epay_format_amount($invoice['total']);
-    }
-
-    return null;
-}
-
 $isReturn = isset($_GET['return']);
+$returnInvoiceId = (int) ($_GET['invoiceid'] ?? 0);
 $requestParams = $_POST ?: $_GET;
 unset($requestParams['return']);
+unset($requestParams['invoiceid']);
 
 $safeLogData = $requestParams;
 $safeLogData['callback_mode'] = $isReturn ? 'return' : 'notify';
+if ($returnInvoiceId > 0) {
+    $safeLogData['return_invoiceid'] = $returnInvoiceId;
+}
 $invoiceId = 0;
 
 if (empty($requestParams)) {
     logTransaction($gatewayModuleName, [], 'Empty Callback');
-    whmcs_peakrack_epay_callback_finish($isReturn, $gatewayParams, 0, 'failure');
+    whmcs_peakrack_epay_callback_finish($isReturn, $gatewayParams, $returnInvoiceId, 'failure');
 }
 
 if (empty($requestParams['pid']) || (string) $requestParams['pid'] !== (string) $gatewayParams['merchantId']) {
     logTransaction($gatewayModuleName, $safeLogData, 'Invalid Merchant ID');
-    whmcs_peakrack_epay_callback_finish($isReturn, $gatewayParams, 0, 'failure');
+    whmcs_peakrack_epay_callback_finish($isReturn, $gatewayParams, $returnInvoiceId, 'failure');
 }
 
 if (!whmcs_peakrack_epay_verify_callback($requestParams, $gatewayParams)) {
     logTransaction($gatewayModuleName, $safeLogData, 'Signature Verification Failed');
-    whmcs_peakrack_epay_callback_finish($isReturn, $gatewayParams, 0, 'failure');
+    whmcs_peakrack_epay_callback_finish($isReturn, $gatewayParams, $returnInvoiceId, 'failure');
 }
 
 $outTradeNo = (string) ($requestParams['out_trade_no'] ?? '');
@@ -92,8 +75,14 @@ if ($invoiceId <= 0) {
 }
 $invoiceId = checkCbInvoiceID($invoiceId, $gatewayParams['paymentmethod']);
 
-$transactionId = (string) ($requestParams['trade_no'] ?? $requestParams['api_trade_no'] ?? '');
-$paymentAmount = whmcs_peakrack_epay_format_amount($requestParams['money'] ?? $requestParams['amount'] ?? $requestParams['total_fee'] ?? 0);
+$transactionId = '';
+foreach (['trade_no', 'api_trade_no', 'transaction_id', 'transactionId', 'out_trade_no'] as $transactionField) {
+    if (!empty($requestParams[$transactionField])) {
+        $transactionId = (string) $requestParams[$transactionField];
+        break;
+    }
+}
+$paymentAmount = whmcs_peakrack_epay_format_amount($requestParams['money'] ?? $requestParams['amount'] ?? $requestParams['total_amount'] ?? $requestParams['total_fee'] ?? 0);
 
 if (!whmcs_peakrack_epay_is_success_status($requestParams)) {
     logTransaction($gatewayModuleName, $safeLogData, 'Ignored Status: ' . ($requestParams['trade_status'] ?? $requestParams['status'] ?? 'unknown'));
@@ -135,7 +124,7 @@ if (whmcs_peakrack_epay_callback_transaction_exists($transactionId)) {
 
 checkCbTransID($transactionId);
 
-$invoiceBalance = whmcs_peakrack_epay_callback_invoice_balance($invoiceId);
+$invoiceBalance = whmcs_peakrack_epay_invoice_balance($invoiceId);
 if ($invoiceBalance !== null && (float) $invoiceBalance <= 0.0) {
     logTransaction($gatewayModuleName, $safeLogData, 'Invoice Already Paid');
     whmcs_peakrack_epay_callback_finish($isReturn, $gatewayParams, $invoiceId, 'success');

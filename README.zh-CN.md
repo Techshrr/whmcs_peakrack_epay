@@ -96,7 +96,7 @@ https://你的WHMCS域名/modules/gateways/callback/peakrack_epay.php
 客户浏览器返回地址为：
 
 ```text
-https://你的WHMCS域名/modules/gateways/callback/peakrack_epay.php?return=1
+https://你的WHMCS域名/modules/gateways/callback/peakrack_epay.php?return=1&invoiceid=INVOICE_ID
 ```
 
 站点必须能被易支付服务器通过公网 HTTPS 访问。
@@ -109,9 +109,16 @@ https://你的WHMCS域名/modules/gateways/callback/peakrack_epay.php?return=1
 
 `V2 / RSA` 模式会增加 `timestamp`，再使用商户私钥对待签名字符串做 SHA256WithRSA 签名，签名结果 Base64 后提交 `sign_type=RSA`。
 
-回调会按回传的 `sign_type` 验签：RSA 回调用平台公钥验签，MD5 回调用商户密钥验签。只有 `trade_status=TRADE_SUCCESS` 或兼容成功状态的回调会入账。
+回调会按回传的 `sign_type` 验签：RSA 回调用平台公钥验签，MD5 回调用商户密钥验签。只有 `trade_status=TRADE_SUCCESS`、`TRADE_FINISHED` 或兼容成功状态的回调会入账。
 
 ## 更新记录
+
+### 2.1.1
+
+- 本地支付方式选择 token 增加 2 小时有效期。
+- 避免客户使用过期页面或已支付账单页面再次创建新的易支付订单。
+- 加固回调兼容性，支持更多常见成功状态、交易号字段和 `total_amount` 金额字段。
+- 浏览器返回地址增加账单识别，即使易支付返回浏览器时未附完整回调参数，也能把客户带回账单页。
 
 ### 2.1.0
 

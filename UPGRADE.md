@@ -1,5 +1,13 @@
 # Upgrade Notes
 
+## 2.1.1
+
+No database migration is required.
+
+Upload the updated files over the existing module files.
+
+This release hardens the 2.1.0 local redirect flow. Payment-method selection tokens now expire after two hours, stale paid-invoice pages are redirected back to the invoice instead of creating a new provider order, callbacks accept additional common success and transaction fields, and browser returns include the invoice ID for safer customer redirection.
+
 ## 2.1.0
 
 No database migration is required.

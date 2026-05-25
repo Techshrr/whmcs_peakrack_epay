@@ -60,7 +60,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
         'zh' => [
             'admin_title' => 'PeakRack 易支付网关配置',
             'admin_subtitle' => '用于兼容易支付 V1/MD5 与 V2/RSA 的页面跳转支付接口。请填写易支付平台提供的商户 ID、密钥和 submit.php 地址。',
-            'version_badge' => '版本 2.1.0',
+            'version_badge' => '版本 2.1.1',
             'language_zh' => '中文',
             'language_en' => 'English',
             'credentials_title' => '易支付凭据',
@@ -68,7 +68,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
             'order_title' => '订单与展示',
             'order_desc' => '控制客户前台可选择的支付方式、商户订单号前缀和易支付页面展示的网站名称。',
             'security_title' => '金额校验与回调',
-            'security_desc' => '建议保持金额校验开启。notify_url 不带查询参数，return_url 会带 return=1 用于客户浏览器返回。',
+            'security_desc' => '建议保持金额校验开启。notify_url 不带查询参数，return_url 会带 return=1 和账单 ID 用于客户浏览器返回。',
             'help_title' => '上线检查',
             'help_desc' => '回调地址为 modules/gateways/callback/peakrack_epay.php。多币种站点请把此网关的 Convert To For Processing 设置为 CNY。',
             'submit_url' => 'Submit URL',
@@ -106,7 +106,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
         'en' => [
             'admin_title' => 'PeakRack EPay Gateway Configuration',
             'admin_subtitle' => 'Configure EPay-compatible V1/MD5 and V2/RSA hosted payment. Enter the merchant ID, keys, and submit.php URL from your EPay provider.',
-            'version_badge' => 'Version 2.1.0',
+            'version_badge' => 'Version 2.1.1',
             'language_zh' => '中文',
             'language_en' => 'English',
             'credentials_title' => 'EPay Credentials',
@@ -114,7 +114,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
             'order_title' => 'Order and Display',
             'order_desc' => 'Controls the payment methods customers can choose, merchant order prefix, and site name shown by the EPay provider.',
             'security_title' => 'Amount Verification and Callback',
-            'security_desc' => 'Amount verification should remain enabled. notify_url has no query string; return_url includes return=1 for browser returns.',
+            'security_desc' => 'Amount verification should remain enabled. notify_url has no query string; return_url includes return=1 and invoice ID for browser returns.',
             'help_title' => 'Go-Live Checklist',
             'help_desc' => 'The callback endpoint is modules/gateways/callback/peakrack_epay.php. For multi-currency stores, set this gateway\'s Convert To For Processing option to CNY.',
             'submit_url' => 'Submit URL',
@@ -521,13 +521,15 @@ function peakrack_epay_link($params)
 </style>';
 
     $forms = '';
+    $selectionIssuedAt = time();
     foreach ($paymentTypes as $paymentType) {
         $selectionParams = [
             'invoiceid' => $invoiceId,
             'amount' => $amount,
             'currency' => 'CNY',
             'type' => $paymentType,
-            'token' => whmcs_peakrack_epay_selection_token($params, $invoiceId, $amount, 'CNY', $paymentType),
+            'issued' => $selectionIssuedAt,
+            'token' => whmcs_peakrack_epay_selection_token($params, $invoiceId, $amount, 'CNY', $paymentType, $selectionIssuedAt),
         ];
         $buttonLabel = whmcs_peakrack_epay_payment_type_label($paymentType, $params);
 
