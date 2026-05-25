@@ -104,6 +104,11 @@ Callbacks are verified using the same selected signature type. RSA callbacks are
 
 ## Release Notes
 
+### 2.0.2
+
+- Hardened the admin signature-mode field toggle for WHMCS installs that render gateway setting names in a different case or table structure.
+- The toggle now locates fields by setting name, visible row label, and V1/V2 option text, with delayed retries after page load.
+
 ### 2.0.1
 
 - Added signature-mode-aware admin field visibility.

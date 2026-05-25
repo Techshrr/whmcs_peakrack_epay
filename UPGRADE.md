@@ -1,5 +1,11 @@
 # Upgrade Notes
 
+## 2.0.2
+
+No database migration is required.
+
+This release hardens the admin-side signature mode toggle for WHMCS templates that render gateway setting names or rows differently. If `V1 / MD5` is selected, RSA key rows should now be hidden more reliably; if `V2 / RSA` is selected, the MD5 merchant key row should be hidden more reliably.
+
 ## 2.0.1
 
 No database migration is required.

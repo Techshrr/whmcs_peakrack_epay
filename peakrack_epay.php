@@ -60,7 +60,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
         'zh' => [
             'admin_title' => 'PeakRack 易支付网关配置',
             'admin_subtitle' => '用于兼容易支付 V1/MD5 与 V2/RSA 的页面跳转支付接口。请填写易支付平台提供的商户 ID、密钥和 submit.php 地址。',
-            'version_badge' => '版本 2.0.1',
+            'version_badge' => '版本 2.0.2',
             'language_zh' => '中文',
             'language_en' => 'English',
             'credentials_title' => '易支付凭据',
@@ -108,7 +108,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
         'en' => [
             'admin_title' => 'PeakRack EPay Gateway Configuration',
             'admin_subtitle' => 'Configure EPay-compatible V1/MD5 and V2/RSA hosted payment. Enter the merchant ID, keys, and submit.php URL from your EPay provider.',
-            'version_badge' => 'Version 2.0.1',
+            'version_badge' => 'Version 2.0.2',
             'language_zh' => '中文',
             'language_en' => 'English',
             'credentials_title' => 'EPay Credentials',
@@ -242,9 +242,20 @@ function whmcs_peakrack_epay_admin_mode_script(string $language): array
         whmcs_peakrack_epay_admin_text($language, 'mode_validation_v2'),
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
     );
+    $labels = json_encode(
+        [
+            'apiVersion' => ['签名方式', 'Signature Mode'],
+            'merchantKey' => ['商户密钥 / KEY', 'Merchant Key'],
+            'merchantPrivateKey' => ['商户私钥 / PRIVATE KEY', 'Merchant Private Key'],
+            'platformPublicKey' => ['平台公钥', 'Platform Public Key'],
+        ],
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+    );
 
     return whmcs_peakrack_epay_admin_system('<script>
 (function () {
+    var labels = ' . $labels . ';
+
     function ready(callback) {
         if (document.readyState === "loading") {
             document.addEventListener("DOMContentLoaded", callback);
@@ -253,16 +264,109 @@ function whmcs_peakrack_epay_admin_mode_script(string $language): array
         callback();
     }
 
-    function field(name) {
-        return document.querySelector("[name=\"field[" + name + "]\"],[name=\"" + name + "\"],[name$=\"[" + name + "]\"]");
+    function unique(values) {
+        var seen = {};
+        var result = [];
+        values.forEach(function (value) {
+            value = String(value || "");
+            if (value !== "" && !seen[value]) {
+                seen[value] = true;
+                result.push(value);
+            }
+        });
+        return result;
     }
 
-    function row(element) {
-        return element && element.closest ? element.closest("tr,.form-group,.fieldarea") : null;
+    function fieldNames(name) {
+        var lower = String(name).toLowerCase();
+        var snake = String(name).replace(/[A-Z]/g, function (letter) {
+            return "_" + letter.toLowerCase();
+        });
+
+        return unique([name, lower, snake, "field[" + name + "]", "field[" + lower + "]", "field[" + snake + "]"]);
     }
 
-    function setRowVisible(element, visible) {
-        var target = row(element);
+    function byName(name) {
+        var names = fieldNames(name);
+        var selectorParts = [];
+
+        names.forEach(function (candidate) {
+            selectorParts.push("[name=\"" + candidate + "\"]");
+            selectorParts.push("[name$=\"[" + candidate.replace(/^field\\[|\\]$/g, "") + "]\"]");
+            selectorParts.push("#" + candidate.replace(/[^A-Za-z0-9_-]/g, "_"));
+        });
+
+        try {
+            return document.querySelector(selectorParts.join(","));
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function allRows() {
+        return Array.prototype.slice.call(document.querySelectorAll("tr,.form-group"));
+    }
+
+    function rowText(row) {
+        return String(row ? row.textContent || "" : "").replace(/\s+/g, " ").trim();
+    }
+
+    function rowByLabels(key) {
+        var wanted = labels[key] || [];
+        var rows = allRows();
+
+        for (var i = 0; i < rows.length; i++) {
+            var text = rowText(rows[i]);
+            for (var j = 0; j < wanted.length; j++) {
+                if (text.indexOf(wanted[j]) !== -1) {
+                    return rows[i];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    function row(element, key) {
+        var target = element && element.closest ? element.closest("tr,.form-group") : null;
+        return target || rowByLabels(key);
+    }
+
+    function inputFromRow(row, selector) {
+        return row ? row.querySelector(selector || "select,textarea,input") : null;
+    }
+
+    function selectByOptions() {
+        var selects = Array.prototype.slice.call(document.querySelectorAll("select"));
+        for (var i = 0; i < selects.length; i++) {
+            var optionText = Array.prototype.map.call(selects[i].options || [], function (option) {
+                return String(option.value || "") + " " + String(option.text || "");
+            }).join(" ").toLowerCase();
+            if (optionText.indexOf("v1") !== -1 && optionText.indexOf("md5") !== -1
+                && optionText.indexOf("v2") !== -1 && optionText.indexOf("rsa") !== -1
+            ) {
+                return selects[i];
+            }
+        }
+
+        return null;
+    }
+
+    function control(key, selector) {
+        var element = byName(key);
+        var targetRow = row(element, key);
+        if (!element && targetRow) {
+            element = inputFromRow(targetRow, selector);
+        }
+
+        return {
+            element: element,
+            row: targetRow || row(element, key)
+        };
+    }
+
+    function setRowVisible(item, visible) {
+        var target = item && item.row;
         if (!target) {
             return;
         }
@@ -279,58 +383,96 @@ function whmcs_peakrack_epay_admin_mode_script(string $language): array
         return value.indexOf("v2") !== -1 || value.indexOf("rsa") !== -1;
     }
 
-    ready(function () {
-        var apiField = field("apiVersion");
-        var merchantKey = field("merchantKey");
-        var merchantPrivateKey = field("merchantPrivateKey");
-        var platformPublicKey = field("platformPublicKey");
+    function locate() {
+        var api = control("apiVersion", "select");
+        if (!api.element) {
+            api.element = selectByOptions();
+            api.row = row(api.element, "apiVersion");
+        }
+
+        return {
+            api: api,
+            merchantKey: control("merchantKey", "input"),
+            merchantPrivateKey: control("merchantPrivateKey", "textarea"),
+            platformPublicKey: control("platformPublicKey", "textarea")
+        };
+    }
+
+    function bind(attempt) {
+        var fields = locate();
+        var apiField = fields.api.element;
+        var merchantKey = fields.merchantKey.element;
+        var merchantPrivateKey = fields.merchantPrivateKey.element;
+        var platformPublicKey = fields.platformPublicKey.element;
 
         if (!apiField || !merchantKey || !merchantPrivateKey || !platformPublicKey) {
+            if (attempt < 20) {
+                window.setTimeout(function () {
+                    bind(attempt + 1);
+                }, 250);
+            }
             return;
         }
 
         function updateModeRows() {
             var v2 = isV2Mode(apiField);
-            setRowVisible(merchantKey, !v2);
-            setRowVisible(merchantPrivateKey, v2);
-            setRowVisible(platformPublicKey, v2);
+            fields = locate();
+            apiField = fields.api.element || apiField;
+            merchantKey = fields.merchantKey.element || merchantKey;
+            merchantPrivateKey = fields.merchantPrivateKey.element || merchantPrivateKey;
+            platformPublicKey = fields.platformPublicKey.element || platformPublicKey;
+            setRowVisible(fields.merchantKey, !v2);
+            setRowVisible(fields.merchantPrivateKey, v2);
+            setRowVisible(fields.platformPublicKey, v2);
         }
 
         function valueIsEmpty(element) {
             return String(element.value || "").replace(/\s+/g, "") === "";
         }
 
-        apiField.addEventListener("change", updateModeRows);
+        if (!apiField.getAttribute("data-prk-epay-mode-bound")) {
+            apiField.setAttribute("data-prk-epay-mode-bound", "1");
+            apiField.addEventListener("change", updateModeRows);
+            apiField.addEventListener("input", updateModeRows);
+        }
         updateModeRows();
 
         var form = apiField.form || apiField.closest("form");
-        if (!form) {
-            return;
+        if (form && !form.getAttribute("data-prk-epay-mode-submit-bound")) {
+            form.setAttribute("data-prk-epay-mode-submit-bound", "1");
+            form.addEventListener("submit", function (event) {
+                var current = locate();
+                var currentApi = current.api.element || apiField;
+                var currentMerchantKey = current.merchantKey.element || merchantKey;
+                var currentMerchantPrivateKey = current.merchantPrivateKey.element || merchantPrivateKey;
+                var currentPlatformPublicKey = current.platformPublicKey.element || platformPublicKey;
+                var v2 = isV2Mode(currentApi);
+                updateModeRows();
+
+                if (!v2 && valueIsEmpty(currentMerchantKey)) {
+                    event.preventDefault();
+                    setRowVisible(current.merchantKey, true);
+                    currentMerchantKey.focus();
+                    alert(' . $v1Message . ');
+                    return false;
+                }
+
+                if (v2 && (valueIsEmpty(currentMerchantPrivateKey) || valueIsEmpty(currentPlatformPublicKey))) {
+                    event.preventDefault();
+                    setRowVisible(current.merchantPrivateKey, true);
+                    setRowVisible(current.platformPublicKey, true);
+                    (valueIsEmpty(currentMerchantPrivateKey) ? currentMerchantPrivateKey : currentPlatformPublicKey).focus();
+                    alert(' . $v2Message . ');
+                    return false;
+                }
+
+                return true;
+            });
         }
+    }
 
-        form.addEventListener("submit", function (event) {
-            var v2 = isV2Mode(apiField);
-            updateModeRows();
-
-            if (!v2 && valueIsEmpty(merchantKey)) {
-                event.preventDefault();
-                setRowVisible(merchantKey, true);
-                merchantKey.focus();
-                alert(' . $v1Message . ');
-                return false;
-            }
-
-            if (v2 && (valueIsEmpty(merchantPrivateKey) || valueIsEmpty(platformPublicKey))) {
-                event.preventDefault();
-                setRowVisible(merchantPrivateKey, true);
-                setRowVisible(platformPublicKey, true);
-                (valueIsEmpty(merchantPrivateKey) ? merchantPrivateKey : platformPublicKey).focus();
-                alert(' . $v2Message . ');
-                return false;
-            }
-
-            return true;
-        });
+    ready(function () {
+        bind(0);
     });
 })();
 </script>');
