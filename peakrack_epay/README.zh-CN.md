@@ -9,6 +9,7 @@ modules/gateways/peakrack_epay/
 包含：
 
 - `lib.php`：MD5/RSA 签名、验签、金额、订单号、语言与展示辅助函数
+- `redirect.php`：客户点击支付方式后才生成易支付订单并跳转提交
 - `alipay-logo-icon.png`：支付宝付款按钮图标
 - `whmcs.json`：WHMCS 网关元数据
 

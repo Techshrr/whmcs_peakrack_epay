@@ -60,7 +60,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
         'zh' => [
             'admin_title' => 'PeakRack 易支付网关配置',
             'admin_subtitle' => '用于兼容易支付 V1/MD5 与 V2/RSA 的页面跳转支付接口。请填写易支付平台提供的商户 ID、密钥和 submit.php 地址。',
-            'version_badge' => '版本 2.0.0',
+            'version_badge' => '版本 2.1.0',
             'language_zh' => '中文',
             'language_en' => 'English',
             'credentials_title' => '易支付凭据',
@@ -106,7 +106,7 @@ function whmcs_peakrack_epay_admin_text(string $language, string $key): string
         'en' => [
             'admin_title' => 'PeakRack EPay Gateway Configuration',
             'admin_subtitle' => 'Configure EPay-compatible V1/MD5 and V2/RSA hosted payment. Enter the merchant ID, keys, and submit.php URL from your EPay provider.',
-            'version_badge' => 'Version 2.0.0',
+            'version_badge' => 'Version 2.1.0',
             'language_zh' => '中文',
             'language_en' => 'English',
             'credentials_title' => 'EPay Credentials',
@@ -414,28 +414,7 @@ function peakrack_epay_link($params)
     }
 
     $systemUrl = rtrim((string) $params['systemurl'], '/');
-    $callbackUrl = $systemUrl . '/modules/gateways/callback/peakrack_epay.php';
-    $returnUrl = $callbackUrl . '?return=1';
-    $invoiceLabel = whmcs_peakrack_epay_clean_display_text(
-        $params['companyname'] . ' - Invoice #' . ($params['invoicenum'] ?: $invoiceId)
-    );
-    $itemSummary = whmcs_peakrack_epay_invoice_item_summary($invoiceId);
-    $firstItem = whmcs_peakrack_epay_clean_display_text($itemSummary['first_item'], $invoiceLabel);
-    $name = whmcs_peakrack_epay_truncate($firstItem, 127);
-    $siteName = whmcs_peakrack_epay_clean_display_text($params['siteName'] ?? '', $params['companyname'] ?? '');
-
-    $baseRequestParams = [
-        'pid' => trim((string) $params['merchantId']),
-        'notify_url' => $callbackUrl,
-        'return_url' => $returnUrl,
-        'name' => $name,
-        'money' => $amount,
-        'param' => whmcs_peakrack_epay_build_param($invoiceId, $amount, 'CNY'),
-    ];
-
-    if ($siteName !== '') {
-        $baseRequestParams['sitename'] = whmcs_peakrack_epay_truncate($siteName, 64);
-    }
+    $redirectUrl = $systemUrl . '/modules/gateways/peakrack_epay/redirect.php';
 
     $paymentTypes = whmcs_peakrack_epay_enabled_payment_types($params);
     $buttonStyles = '<style>
@@ -543,39 +522,17 @@ function peakrack_epay_link($params)
 
     $forms = '';
     foreach ($paymentTypes as $paymentType) {
-        $requestParams = $baseRequestParams;
-        $requestParams['out_trade_no'] = whmcs_peakrack_epay_out_trade_no($invoiceId, $params['orderPrefix'] ?? 'PRK_');
-        if ($paymentType !== 'cashier') {
-            $requestParams['type'] = $paymentType;
-        }
-
-        if ($apiMode === 'v2_rsa') {
-            $requestParams['timestamp'] = (string) time();
-            try {
-                $requestParams['sign'] = whmcs_peakrack_epay_rsa_sign($requestParams, $params['merchantPrivateKey']);
-            } catch (Throwable $e) {
-                return whmcs_peakrack_epay_alert(
-                    'danger',
-                    whmcs_peakrack_epay_lang('signing_failed', $params, ['message' => $e->getMessage()])
-                );
-            }
-            $requestParams['sign_type'] = 'RSA';
-        } else {
-            try {
-                $requestParams['sign'] = whmcs_peakrack_epay_sign($requestParams, $params['merchantKey']);
-            } catch (Throwable $e) {
-                return whmcs_peakrack_epay_alert(
-                    'danger',
-                    whmcs_peakrack_epay_lang('signing_failed', $params, ['message' => $e->getMessage()])
-                );
-            }
-            $requestParams['sign_type'] = 'MD5';
-        }
-
+        $selectionParams = [
+            'invoiceid' => $invoiceId,
+            'amount' => $amount,
+            'currency' => 'CNY',
+            'type' => $paymentType,
+            'token' => whmcs_peakrack_epay_selection_token($params, $invoiceId, $amount, 'CNY', $paymentType),
+        ];
         $buttonLabel = whmcs_peakrack_epay_payment_type_label($paymentType, $params);
 
-        $forms .= '<form class="prk-epay-payment-form" method="post" accept-charset="UTF-8" action="' . htmlspecialchars($submitUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n"
-        . whmcs_peakrack_epay_render_hidden_inputs($requestParams)
+        $forms .= '<form class="prk-epay-payment-form" method="post" accept-charset="UTF-8" action="' . htmlspecialchars($redirectUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n"
+        . whmcs_peakrack_epay_render_hidden_inputs($selectionParams)
         . '<button type="submit" class="btn btn-primary prk-epay-payment-button">'
         . '<span class="prk-epay-payment-button__icon prk-epay-payment-button__icon--' . htmlspecialchars($paymentType, ENT_QUOTES, 'UTF-8') . '">' . whmcs_peakrack_epay_payment_type_icon($paymentType, $params) . '</span>'
         . '<span class="prk-epay-payment-button__label">' . htmlspecialchars($buttonLabel, ENT_QUOTES, 'UTF-8') . '</span>'

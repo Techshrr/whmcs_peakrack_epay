@@ -9,6 +9,7 @@ Public example EPay provider: [互六鼎付](https://pay.idcli.com/) (`Submit UR
 ## Features
 
 - Hosted payment form submission to an EPay `submit.php` endpoint
+- Provider order creation only after the customer clicks one payment method
 - V1/MD5 request signing and callback signature verification
 - V2/RSA compatible-mode signing with `timestamp` and SHA256WithRSA
 - Allows multiple enabled payment methods such as `alipay`, `wxpay`, `qqpay`, `bank`, provider cashier routing, and custom provider types
@@ -44,6 +45,7 @@ Expected files after upload:
 ```text
 modules/gateways/peakrack_epay.php
 modules/gateways/peakrack_epay/lib.php
+modules/gateways/peakrack_epay/redirect.php
 modules/gateways/peakrack_epay/alipay-logo-icon.png
 modules/gateways/peakrack_epay/whmcs.json
 modules/gateways/callback/peakrack_epay.php
@@ -74,6 +76,8 @@ Convert To For Processing = CNY
 
 WHMCS will convert the invoice amount to CNY before sending the customer to EPay. The callback verifies the returned CNY amount before applying the invoice payment.
 
+When multiple payment methods are enabled, the invoice page only posts the customer's selected method back to the local module first. The module creates and submits the EPay order only after that click, so one WHMCS invoice does not create multiple unpaid provider orders just because multiple methods are visible.
+
 ## Callback URL
 
 The module passes the asynchronous callback URL dynamically:
@@ -101,6 +105,12 @@ In `V2 / RSA` mode, the module adds `timestamp`, signs the sorted parameter stri
 Callbacks are verified using the same selected signature type. RSA callbacks are verified with the platform public key; MD5 callbacks are verified with the merchant key. Only successful callbacks with `trade_status=TRADE_SUCCESS` or a compatible success status are applied.
 
 ## Release Notes
+
+### 2.1.0
+
+- Changed payment method buttons to post to a local module redirect endpoint first.
+- EPay `out_trade_no`, request signing, and provider submission are now generated only after the customer clicks one concrete payment method.
+- This avoids creating multiple unpaid EPay provider orders when Alipay, WeChat Pay, and other methods are shown together.
 
 ### 2.0.0
 

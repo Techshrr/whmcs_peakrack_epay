@@ -2,7 +2,7 @@
   "schema": "1.0",
   "type": "whmcs-gateways",
   "name": "peakrack_epay",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "license": "MIT",
   "category": "payments",
   "description": {
@@ -12,6 +12,7 @@
     "features": [
       "EPay-compatible submit.php hosted payment",
       "Customer-facing payment method chooser for Alipay, WeChat Pay, QQ Wallet, bank, cashier, and custom provider types",
+      "Provider orders are created only after the customer clicks one payment method",
       "Copy-paste friendly Submit URL handling with optional trailing slash",
       "V1 MD5 request and callback signature verification",
       "V2 RSA compatible signing with timestamp and platform-public-key callback verification",

@@ -1,5 +1,17 @@
 # Upgrade Notes
 
+## 2.1.0
+
+No database migration is required.
+
+Upload the new file:
+
+```text
+peakrack_epay/redirect.php -> modules/gateways/peakrack_epay/redirect.php
+```
+
+This release changes when provider orders are created. Previous versions rendered one signed EPay form per enabled payment method, which could create multiple unpaid provider-side records for one WHMCS invoice in some EPay installations. Version 2.1.0 renders local method-selection forms first; the EPay order number, signature, and provider POST are generated only after the customer clicks one method.
+
 ## 2.0.0
 
 No database migration is required.

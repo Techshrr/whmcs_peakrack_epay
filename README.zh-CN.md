@@ -9,6 +9,7 @@ English documentation: [README.md](README.md)
 ## 功能
 
 - 易支付 V1 页面跳转支付 `submit.php`
+- 客户点击某个支付方式后才创建易支付订单
 - V1/MD5 请求签名和回调验签
 - V2/RSA 兼容模式签名，支持 `timestamp` 和 SHA256WithRSA
 - 支持后台同时启用 `alipay`、`wxpay`、`qqpay`、`bank`、收银台或自定义类型，客户付款时再选择具体方式
@@ -45,6 +46,7 @@ callback/peakrack_epay.php   -> modules/gateways/callback/peakrack_epay.php
 ```text
 modules/gateways/peakrack_epay.php
 modules/gateways/peakrack_epay/lib.php
+modules/gateways/peakrack_epay/redirect.php
 modules/gateways/peakrack_epay/alipay-logo-icon.png
 modules/gateways/peakrack_epay/whmcs.json
 modules/gateways/callback/peakrack_epay.php
@@ -81,6 +83,8 @@ CNY
 
 WHMCS 会在客户跳转易支付前按后台汇率换算成人民币。易支付回调后，模块会校验人民币支付金额，再让 WHMCS 按该发票当前余额入账。
 
+启用多个支付方式时，账单页只会先把客户选择的那个方式提交回本地模块。模块会在客户点击后才生成易支付 `out_trade_no`、签名并提交到易支付，所以一个 WHMCS 账单不会因为同时显示支付宝、微信等按钮就在易支付后台产生多笔未支付订单。
+
 ## 回调地址
 
 模块会在每次支付请求中动态传入异步通知地址：
@@ -108,6 +112,12 @@ https://你的WHMCS域名/modules/gateways/callback/peakrack_epay.php?return=1
 回调会按回传的 `sign_type` 验签：RSA 回调用平台公钥验签，MD5 回调用商户密钥验签。只有 `trade_status=TRADE_SUCCESS` 或兼容成功状态的回调会入账。
 
 ## 更新记录
+
+### 2.1.0
+
+- 支付方式按钮改为先提交到本地模块跳转端点。
+- 易支付 `out_trade_no`、请求签名和提交到易支付的动作改为客户点击某个具体支付方式后才生成。
+- 避免支付宝、微信等多个方式同时显示时，一个 WHMCS 账单在易支付后台产生多笔未支付订单。
 
 ### 2.0.0
 

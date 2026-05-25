@@ -534,6 +534,101 @@ function whmcs_peakrack_epay_out_trade_no($invoiceId, $prefix)
     return substr($prefix . $tail, 0, 64);
 }
 
+function whmcs_peakrack_epay_selection_token_secret(array $params)
+{
+    foreach (['merchantKey', 'merchantPrivateKey'] as $field) {
+        $value = trim((string) ($params[$field] ?? ''));
+        if ($value !== '') {
+            return hash('sha256', 'peakrack_epay|' . $value);
+        }
+    }
+
+    return hash('sha256', 'peakrack_epay|' . (string) ($params['merchantId'] ?? ''));
+}
+
+function whmcs_peakrack_epay_selection_token_payload($invoiceId, $amount, $currency, $paymentType)
+{
+    return implode('|', [
+        (int) $invoiceId,
+        whmcs_peakrack_epay_format_amount($amount),
+        strtoupper((string) $currency),
+        whmcs_peakrack_epay_normalize_payment_type($paymentType),
+    ]);
+}
+
+function whmcs_peakrack_epay_selection_token(array $params, $invoiceId, $amount, $currency, $paymentType)
+{
+    return hash_hmac(
+        'sha256',
+        whmcs_peakrack_epay_selection_token_payload($invoiceId, $amount, $currency, $paymentType),
+        whmcs_peakrack_epay_selection_token_secret($params)
+    );
+}
+
+function whmcs_peakrack_epay_verify_selection_token(array $params, $invoiceId, $amount, $currency, $paymentType, $token)
+{
+    $expected = whmcs_peakrack_epay_selection_token($params, $invoiceId, $amount, $currency, $paymentType);
+
+    return hash_equals($expected, (string) $token);
+}
+
+function whmcs_peakrack_epay_payment_type_is_enabled($paymentType, array $params)
+{
+    $paymentType = whmcs_peakrack_epay_normalize_payment_type($paymentType);
+    if ($paymentType === '') {
+        return false;
+    }
+
+    return in_array($paymentType, whmcs_peakrack_epay_enabled_payment_types($params), true);
+}
+
+function whmcs_peakrack_epay_build_payment_request(array $params, $invoiceId, $amount, $paymentType)
+{
+    $invoiceId = (int) $invoiceId;
+    $amount = whmcs_peakrack_epay_format_amount($amount);
+    $paymentType = whmcs_peakrack_epay_normalize_payment_type($paymentType);
+    $systemUrl = rtrim((string) ($params['systemurl'] ?? ''), '/');
+    $callbackUrl = $systemUrl . '/modules/gateways/callback/peakrack_epay.php';
+    $invoiceNumber = $params['invoicenum'] ?? $invoiceId;
+    $invoiceLabel = whmcs_peakrack_epay_clean_display_text(
+        ($params['companyname'] ?? '') . ' - Invoice #' . ($invoiceNumber ?: $invoiceId)
+    );
+    $itemSummary = whmcs_peakrack_epay_invoice_item_summary($invoiceId);
+    $firstItem = whmcs_peakrack_epay_clean_display_text($itemSummary['first_item'], $invoiceLabel);
+    $siteName = whmcs_peakrack_epay_clean_display_text($params['siteName'] ?? '', $params['companyname'] ?? '');
+
+    $requestParams = [
+        'pid' => trim((string) ($params['merchantId'] ?? '')),
+        'notify_url' => $callbackUrl,
+        'return_url' => $callbackUrl . '?return=1',
+        'name' => whmcs_peakrack_epay_truncate($firstItem, 127),
+        'money' => $amount,
+        'param' => whmcs_peakrack_epay_build_param($invoiceId, $amount, 'CNY'),
+        'out_trade_no' => whmcs_peakrack_epay_out_trade_no($invoiceId, $params['orderPrefix'] ?? 'PRK_'),
+    ];
+
+    if ($paymentType !== 'cashier') {
+        $requestParams['type'] = $paymentType;
+    }
+
+    if ($siteName !== '') {
+        $requestParams['sitename'] = whmcs_peakrack_epay_truncate($siteName, 64);
+    }
+
+    if (whmcs_peakrack_epay_is_v2_mode($params)) {
+        $requestParams['timestamp'] = (string) time();
+        $requestParams['sign'] = whmcs_peakrack_epay_rsa_sign($requestParams, $params['merchantPrivateKey'] ?? '');
+        $requestParams['sign_type'] = 'RSA';
+
+        return $requestParams;
+    }
+
+    $requestParams['sign'] = whmcs_peakrack_epay_sign($requestParams, $params['merchantKey'] ?? '');
+    $requestParams['sign_type'] = 'MD5';
+
+    return $requestParams;
+}
+
 function whmcs_peakrack_epay_invoice_id_from_out_trade_no($outTradeNo, $prefix)
 {
     $outTradeNo = (string) $outTradeNo;
