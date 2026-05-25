@@ -1,159 +1,104 @@
-# WHMCS PeakRack 易支付网关
+# PeakRack WHMCS EPay Gateway
 
-用于 WHMCS 9.x 的易支付兼容网关模块，支持 V1 `submit.php` 页面跳转支付、MD5 签名、V2/RSA 兼容签名、异步通知回调，以及 WHMCS 多币种转换为人民币支付。
+> 官方仓库：https://github.com/Techshrr/whmcs_peakrack_epay
+> 许可证：Apache License 2.0
 
-English documentation: [README.md](README.md)
+PeakRack WHMCS EPay Gateway 是一个用于易支付兼容页面跳转支付平台的 WHMCS 支付网关。
 
-公开示例易支付站：[互六鼎付](https://pay.idcli.com/)（`Submit URL`：`https://pay.idcli.com/`）。
+## 项目说明
 
-## 功能
+本支付网关把客户提交到易支付兼容平台的 `submit.php` 页面跳转支付接口，并通过 WHMCS 网关回调路径处理异步通知和浏览器返回。
 
-- 易支付 V1 页面跳转支付 `submit.php`
-- 客户点击某个支付方式后才创建易支付订单
-- V1/MD5 请求签名和回调验签
-- V2/RSA 兼容模式签名，支持 `timestamp` 和 SHA256WithRSA
-- 支持后台同时启用 `alipay`、`wxpay`、`qqpay`、`bank`、收银台或自定义类型，客户付款时再选择具体方式
-- WHMCS 发票回调入账
-- 支持 WHMCS `Convert To For Processing = CNY`
-- 易支付返回金额校验
-- 后台配置页分区展示，提供中文 / English 语言切换
-- 客户前台按钮和错误提示中英文切换
+模块支持 V1/MD5 签名和 V2/RSA 兼容页面跳转模式。后台可以启用多个支付方式，但只有客户选择具体支付方式后才会创建平台订单。
+
+## 功能特性
+
+- 易支付 `submit.php` 页面跳转支付提交。
+- V1/MD5 请求签名和回调验签。
+- V2/RSA 兼容签名，支持 `timestamp` 和 SHA256WithRSA。
+- 支持支付宝、微信支付、QQ 钱包、网银、收银台和自定义平台类型。
+- 使用本地 redirect 端点处理客户选择的支付方式。
+- WHMCS 发票回调入账和重复交易检查。
+- 可在入账前校验易支付返回的 CNY 金额。
+- 后台配置标签和客户提示支持中文和英文。
 
 ## 环境要求
 
-- WHMCS 9.x 自托管安装
+- WHMCS 9.0.x
+- PHP 8.2 或更高版本
 - 易支付兼容商户账号
 - 商户 ID / PID
-- V1/MD5 使用的商户密钥 / KEY
-- 启用 V2/RSA 时，PHP 需要 OpenSSL 扩展
-- 启用 V2/RSA 时，需要商户 RSA 私钥和平台公钥
-- WHMCS 站点可通过公网 HTTPS 访问
+- V1/MD5 模式使用的商户密钥
+- V2/RSA 模式需要 PHP OpenSSL 扩展、商户私钥和平台公钥
+- WHMCS 回调地址可通过公网 HTTPS 访问
 
-本模块的 V2 支持面向“页面跳转兼容模式”：仍然把客户提交到 `submit.php`，但会增加 `timestamp` 并使用 RSA 签名，适合易支付后台开启 MD5+RSA 兼容签名的场景。
+## 安装方法
 
-## 安装
+1. 从官方仓库下载最新版本。
+2. 将网关文件上传到对应 WHMCS 路径：
 
-把以下文件和目录上传到对应 WHMCS 网关路径：
+   `peakrack_epay.php` -> `modules/gateways/peakrack_epay.php`
 
-```text
-peakrack_epay.php            -> modules/gateways/peakrack_epay.php
-peakrack_epay/               -> modules/gateways/peakrack_epay/
-callback/peakrack_epay.php   -> modules/gateways/callback/peakrack_epay.php
-```
+   `peakrack_epay/` -> `modules/gateways/peakrack_epay/`
 
-上传后应包含：
+   `callback/peakrack_epay.php` -> `modules/gateways/callback/peakrack_epay.php`
 
-```text
-modules/gateways/peakrack_epay.php
-modules/gateways/peakrack_epay/lib.php
-modules/gateways/peakrack_epay/redirect.php
-modules/gateways/peakrack_epay/alipay-logo-icon.png
-modules/gateways/peakrack_epay/whmcs.json
-modules/gateways/callback/peakrack_epay.php
-```
+3. 登录 WHMCS 后台。
+4. 在 **System Settings > Payment Gateways** 启用 **PeakRack EPay (易支付)**。
+5. 生产环境使用前，请检查所有配置项。
 
-然后在 WHMCS `系统设置 > 支付网关` 中启用 `PeakRack EPay (易支付)`。
+## 配置说明
 
-## 后台配置
+| 配置项 | 说明 | 默认值 |
+|---|---|---|
+| Submit URL | 易支付页面跳转地址；模块会按需追加 `submit.php` | 空 |
+| Signature Mode | 选择 V1/MD5 或 V2/RSA 签名 | V1 / MD5 |
+| Merchant ID / PID | 平台提供的商户编号 | 空 |
+| Merchant Key | V1 签名密钥，也可用于兼容回调验签 | 空 |
+| Merchant Private Key | V2/RSA 请求签名使用的商户私钥 | 空 |
+| Platform Public Key | V2/RSA 回调验签使用的平台公钥 | 空 |
+| Enable Alipay | 显示支付宝付款选项 | 开启 |
+| Enable WeChat Pay | 显示微信支付付款选项 | 开启 |
+| Enable QQ Wallet | 显示 QQ 钱包付款选项 | 关闭 |
+| Enable Online Banking | 显示网银付款选项 | 关闭 |
+| Enable Cashier | 显示平台收银台选项 | 关闭 |
+| Custom Payment Types | 英文逗号分隔的平台 type 值 | 空 |
+| Order Prefix | 平台商户订单号前缀 | PRK_ |
+| Site Name | 传给平台的网站名称 | 空 |
+| Verify Amount | 入账前校验回调金额和预期 CNY 金额 | 开启 |
 
-填写以下字段：
+如果 WHMCS 是多币种站点，而易支付平台按 CNY 收款，请在 WHMCS 网关公共设置中将 **Convert To For Processing** 设置为 `CNY`。
 
-- `Submit URL`，例如 `https://pay.idcli.com/`；从易支付后台复制出来的尾部 `/` 可以保留，模块会自动拼接 `submit.php`
-- `签名方式`：默认使用 `V1 / MD5`；需要 RSA 时选择 `V2 / RSA`
-- `商户 ID / PID`
-- `商户密钥 / KEY`：V1/MD5 必填；V2 兼容模式下可作为 MD5 回调备用验签
-- `商户私钥 / PRIVATE KEY`：V2/RSA 必填；这里填写生成密钥对时得到的商户私钥，不是商户公钥
-- `平台公钥`：V2/RSA 必填，用于回调验签
-- 勾选要启用的支付方式，例如支付宝、微信支付、QQ 钱包、网银支付或收银台
-- `自定义支付类型`，可选；多个用英文逗号分隔，例如 `usdt,paypal`
-- `订单号前缀`
-- `网站名称`，可选
+## 使用说明
 
-如果 WHMCS 默认货币是 USD，而易支付使用 CNY 收款，请把该网关公共设置里的：
+管理员配置商户凭据、签名方式、启用的支付方式、订单号前缀和金额校验开关。
 
-```text
-Convert To For Processing
-```
-
-设置为：
-
-```text
-CNY
-```
-
-WHMCS 会在客户跳转易支付前按后台汇率换算成人民币。易支付回调后，模块会校验人民币支付金额，再让 WHMCS 按该发票当前余额入账。
-
-启用多个支付方式时，账单页只会先把客户选择的那个方式提交回本地模块。模块会在客户点击后才生成易支付 `out_trade_no`、签名并提交到易支付，所以一个 WHMCS 账单不会因为同时显示支付宝、微信等按钮就在易支付后台产生多笔未支付订单。
+客户查看发票时，网关会显示已启用的付款方式。客户选择一种方式后，本地 redirect 端点会生成签名请求并提交到平台。回调文件会校验商户 ID、签名、支付状态、交易号和金额，然后再给 WHMCS 发票入账。
 
 ## 回调地址
 
-模块会在每次支付请求中动态传入异步通知地址：
+异步通知地址为：
 
-```text
-https://你的WHMCS域名/modules/gateways/callback/peakrack_epay.php
-```
+`https://your-whmcs.example/modules/gateways/callback/peakrack_epay.php`
 
-客户浏览器返回地址为：
+浏览器返回地址包含 `return=1` 和发票 ID，用于把客户带回发票页面。
 
-```text
-https://你的WHMCS域名/modules/gateways/callback/peakrack_epay.php?return=1&invoiceid=INVOICE_ID
-```
+## 升级说明
 
-站点必须能被易支付服务器通过公网 HTTPS 访问。
+请查看 [UPGRADE.zh-CN.md](UPGRADE.zh-CN.md)。
 
-## 签名说明
+## 英文文档
 
-模块会把所有非空参数按参数名 ASCII 升序排列，排除 `sign` 和 `sign_type`，拼接为 `key=value&key=value`。
+请查看 [README.md](README.md)。
 
-`V1 / MD5` 模式会在待签名字符串末尾追加商户密钥后计算小写 MD5。
+## 安全说明
 
-`V2 / RSA` 模式会增加 `timestamp`，再使用商户私钥对待签名字符串做 SHA256WithRSA 签名，签名结果 Base64 后提交 `sign_type=RSA`。
+请勿提交生产环境凭据、API Key、数据库密码、支付密钥、WHMCS 授权信息、客户数据、身份证件或私有签名密钥。
 
-回调会按回传的 `sign_type` 验签：RSA 回调用平台公钥验签，MD5 回调用商户密钥验签。只有 `trade_status=TRADE_SUCCESS`、`TRADE_FINISHED` 或兼容成功状态的回调会入账。
+安全问题报告方式请查看 [SECURITY.md](SECURITY.md)。
 
-## 更新记录
+## 许可证
 
-### 2.1.1
+本项目基于 Apache License 2.0 发布。完整许可证请查看 [LICENSE](LICENSE)。
 
-- 本地支付方式选择 token 增加 2 小时有效期。
-- 避免客户使用过期页面或已支付账单页面再次创建新的易支付订单。
-- 加固回调兼容性，支持更多常见成功状态、交易号字段和 `total_amount` 金额字段。
-- 浏览器返回地址增加账单识别，即使易支付返回浏览器时未附完整回调参数，也能把客户带回账单页。
-
-### 2.1.0
-
-- 支付方式按钮改为先提交到本地模块跳转端点。
-- 易支付 `out_trade_no`、请求签名和提交到易支付的动作改为客户点击某个具体支付方式后才生成。
-- 避免支付宝、微信等多个方式同时显示时，一个 WHMCS 账单在易支付后台产生多笔未支付订单。
-
-### 2.0.0
-
-- 增加 `签名方式` 配置，可选择 V1/MD5 或 V2/RSA。
-- 增加 V2/RSA 请求签名：自动提交 `timestamp`，使用商户私钥做 SHA256WithRSA 签名，并用平台公钥验签回调。
-- V1/MD5 仍然是默认模式，老安装不需要强制迁移。
-
-### 1.0.2
-
-- 恢复后台中文 / English 即时切换按钮，并挂到 `Submit URL` 说明行，避免恢复无实际即时作用的保存型下拉框。
-- 优化 `Submit URL` 处理：从易支付后台复制 `https://pay.idcli.com/` 不需要删除尾部斜杠。
-- 优化客户付款页和查看账单侧栏的支付按钮布局，改用内置 SVG 图标，不再用首字方块替代。
-
-### 1.0.1
-
-- 去掉无实际即时作用的后台语言保存下拉框，只保留右上角中文 / English 即时切换按钮。
-- 把单一 `支付方式` 改为多个后台开关，并在客户前台生成多个支付按钮，让客户付款时选择支付宝、微信支付等具体方式。
-
-### 1.0.0
-
-- 初始 PeakRack 易支付网关。
-- 增加页面跳转支付、MD5 签名、回调验签、CNY 金额校验和重复交易保护。
-
-详细升级说明见 [UPGRADE.zh-CN.md](UPGRADE.zh-CN.md)。
-
-## 免责声明
-
-本项目是独立开发的 WHMCS 支付网关模块，不隶属于 WHMCS 或任何易支付平台，也未获得其官方背书。WHMCS 和相关支付平台商标归各自权利人所有。
-
-## 开源协议
-
-MIT License。详见 [LICENSE](LICENSE)。
+其他项目声明请查看 [NOTICE](NOTICE)。

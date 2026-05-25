@@ -1,4 +1,16 @@
 <?php
+// SPDX-License-Identifier: Apache-2.0
+
+/**
+ * PeakRack WHMCS EPay Gateway
+ *
+ * Official repository:
+ * https://github.com/Techshrr/whmcs_peakrack_epay
+ *
+ * Copyright 2026 PeakRack.
+ * Licensed under the Apache License, Version 2.0.
+ * See the LICENSE and NOTICE files for details.
+ */
 
 require_once __DIR__ . '/../../../init.php';
 require_once __DIR__ . '/../../../includes/gatewayfunctions.php';

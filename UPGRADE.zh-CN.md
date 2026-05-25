@@ -1,79 +1,60 @@
 # 升级说明
 
-## 2.1.1
+本文档用于说明如何从旧版本升级本网关。
 
-无需数据库迁移。
+## 升级前准备
 
-用本版本文件覆盖已有模块文件即可。
+1. 备份 WHMCS 文件。
+2. 备份 WHMCS 数据库。
+3. 复制一份当前网关文件、支持目录和回调文件。
+4. 升级前阅读 [CHANGELOG.md](CHANGELOG.md)。
+5. 确认本次升级是否会影响网关配置项。
 
-本版本加固 2.1.0 的本地跳转流程。支付方式选择 token 现在 2 小时后过期；客户使用已支付账单的旧页面时会直接返回账单，不会再创建新的易支付订单；回调兼容更多常见成功状态、交易号字段和金额字段；浏览器返回地址会携带账单 ID，客户支付后返回更稳。
+## 升级步骤
 
-## 2.1.0
+1. 从官方仓库下载最新版本：
 
-无需数据库迁移。
+   https://github.com/Techshrr/whmcs_peakrack_epay
 
-需要新增上传文件：
+2. 将网关文件替换到 WHMCS 对应目录：
 
-```text
-peakrack_epay/redirect.php -> modules/gateways/peakrack_epay/redirect.php
-```
+   `modules/gateways/peakrack_epay.php`
 
-本版本调整易支付订单创建时机。旧版本会为每个已启用支付方式渲染一个已签名的易支付表单，在部分易支付环境中可能导致一个 WHMCS 账单对应多笔易支付未支付记录。2.1.0 会先渲染本地支付方式选择表单；只有客户点击某一个方式后，才生成易支付订单号、签名并提交到易支付。
+   `modules/gateways/peakrack_epay/`
 
-## 2.0.0
+   `modules/gateways/callback/peakrack_epay.php`
 
-无需数据库迁移。
+3. 保留 WHMCS 网关设置中的商户凭据和私钥。
+4. 登录 WHMCS 后台。
+5. 打开网关设置，检查所有配置项。
+6. 如果发票付款按钮没有更新，请清理 WHMCS 模板缓存。
 
-已有安装会继续使用 `V1 / MD5`，除非你手动把新的 `签名方式` 切换为 `V2 / RSA`。
+## 数据库迁移
 
-启用 V2/RSA 时：
+本版本不需要手动执行数据库迁移。
 
-- 确认 WHMCS 服务器已启用 PHP OpenSSL 扩展。
-- 将 `签名方式` 设置为 `V2 / RSA`。
-- `商户私钥 / PRIVATE KEY` 填写易支付 RSA 密钥对生成时得到的商户私钥。
-- `平台公钥` 填写易支付 API 信息页展示的平台公钥。
-- 如果易支付后台开启的是 MD5+RSA 兼容模式，建议保留 `商户密钥 / KEY`，便于兼容 MD5 回调验签。
+## 版本升级说明
 
-本模块仍然把客户页面跳转提交到 `submit.php`；V2/RSA 模式会增加 `timestamp`，使用 SHA256WithRSA 签名，并用平台公钥验签 RSA 回调。
+### 从 2.0.x 升级到 2.1.x
 
-## 1.0.2
+- 不需要数据库变更。
+- 必须存在本地 redirect 端点 `modules/gateways/peakrack_epay/redirect.php`。
+- 现有 V1/MD5 和 V2/RSA 凭据会保留在 WHMCS 网关设置中。
 
-无需数据库迁移。
+### 从 1.x 升级到 2.x
 
-- 中文 / English 后台即时切换按钮现在显示在 `Submit URL` 说明行。
-- `Submit URL` 可直接粘贴易支付后台复制出来的尾部斜杠地址，例如 `https://pay.example.com/`。
-- 客户付款按钮改为内置 SVG 图标和更紧凑的响应式布局。
+- 现有安装会继续使用 `V1 / MD5`，除非管理员修改 `Signature Mode`。
+- 如需启用 `V2 / RSA`，请确认 PHP OpenSSL 可用，并配置商户私钥和平台公钥。
 
-## 1.0.1
+## 回滚方法
 
-原来的 `支付方式` 单一输入框已改为多个支付方式开关：
+如需回滚：
 
-- `启用支付宝`
-- `启用微信支付`
-- `启用 QQ 钱包`
-- `启用网银支付`
-- `启用收银台`
-- `自定义支付类型`
+1. 恢复旧版本网关文件、支持目录和回调文件。
+2. 如果升级修改过 WHMCS 记录，恢复数据库备份。
+3. 清理 WHMCS 模板缓存。
+4. 检查 WHMCS 网关日志和活动日志是否有错误。
 
-客户现在会在发票付款页选择具体方式。旧版保存的 `paymentType` 只在新开关字段不存在时作为兼容回退。
+## 注意事项
 
-已移除保存型 `后台语言` 下拉框。请使用网关标题右上角的中文 / English 按钮即时切换。
-
-## 1.0.0
-
-初始版本。把所有文件安装到对应 WHMCS 网关路径：
-
-```text
-peakrack_epay.php            -> modules/gateways/peakrack_epay.php
-peakrack_epay/               -> modules/gateways/peakrack_epay/
-callback/peakrack_epay.php   -> modules/gateways/callback/peakrack_epay.php
-```
-
-安装后启用 `PeakRack EPay (易支付)` 并配置：
-
-- `Submit URL`
-- `商户 ID / PID`
-- `商户密钥 / KEY`
-- 支付方式开关
-- `订单号前缀`
-- 如果 WHMCS 发票货币不是 CNY，请设置 `Convert To For Processing = CNY`
+不要覆盖生产环境密钥、本地配置文件、自定义模板、回调密钥或支付凭据，除非升级说明明确要求。
