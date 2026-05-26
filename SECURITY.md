@@ -4,16 +4,16 @@
 
 Please do not open public GitHub issues for security vulnerabilities.
 
-Report security issues to:
+Report EPay request-signing, callback-verification, redirect, or amount-validation issues to:
 
 security@peakrack.com
 
 Please include:
 
-- Affected project and version
-- Description of the issue
-- Steps to reproduce
-- Potential impact
+- Affected gateway version, WHMCS version, PHP version, and signature mode
+- Whether the issue affects hosted-payment submission, return handling, notify handling, or invoice crediting
+- Description of the issue and reproduction steps
+- Potential impact on invoice payment state or callback validation
 - Suggested mitigation, if available
 
 ## Supported versions
@@ -25,11 +25,10 @@ Please include:
 
 ## Sensitive data
 
-Do not include real customer data, production API keys, payment secrets, database credentials, WHMCS license information, identity documents, private signing keys, or server passwords in reports.
-For payment gateways, do not include real merchant IDs, private keys, platform keys, transaction IDs, callback signatures, webhook payloads, or production callback URLs in public reports.
+Do not include production merchant IDs, merchant keys, private keys, platform public keys, signed callback payloads, provider order numbers, transaction IDs, real invoice numbers, customer data, WHMCS license data, or production callback URLs in public reports.
 
 ## Public issues
 
-General bugs and feature requests may be submitted through GitHub Issues.
+Installation problems, provider compatibility reports, and documentation fixes may be submitted through GitHub Issues.
 
 Security vulnerabilities must be reported privately by email.
