@@ -18,9 +18,9 @@ It supports V1/MD5 signing and a V2/RSA compatible hosted-payment mode. The gate
 - V2/RSA compatible signing with `timestamp` and SHA256WithRSA.
 - Alipay, WeChat Pay, QQ Wallet, online banking, cashier, and custom provider type options.
 - Local redirect endpoint for selected payment method submission.
-- WHMCS invoice callback handling with duplicate transaction checks.
+- WHMCS invoice callback handling with duplicate transaction checks and confirmed gateway amount application.
 - Optional CNY amount verification before applying invoice payment.
-- Chinese and English gateway configuration labels and client messages.
+- English, Simplified Chinese, and Hong Kong Traditional Chinese gateway configuration labels and client messages where applicable.
 
 ## Requirements
 

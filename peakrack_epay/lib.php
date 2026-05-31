@@ -16,7 +16,7 @@ if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
 }
 
-function whmcs_peakrack_epay_is_chinese_language(array $params = [])
+function whmcs_peakrack_epay_client_locale(array $params = []): string
 {
     $candidates = [];
 
@@ -42,17 +42,72 @@ function whmcs_peakrack_epay_is_chinese_language(array $params = [])
     $candidates[] = $params['clientdetails']['language'] ?? '';
 
     foreach ($candidates as $candidate) {
-        $language = strtolower(trim((string) $candidate));
+        $language = strtolower(str_replace('_', '-', trim((string) $candidate)));
         if ($language === '') {
             continue;
         }
 
+        if (
+            strpos($language, 'chinese-hk') !== false
+            || strpos($language, 'zh-hk') !== false
+            || strpos($language, 'hongkong') !== false
+            || strpos($language, 'hong-kong') !== false
+            || strpos($language, 'hant') !== false
+            || strpos($language, 'traditional') !== false
+            || strpos($language, '繁體') !== false
+            || strpos($language, '繁体') !== false
+        ) {
+            return 'zh-hk';
+        }
+
         return strpos($language, 'chinese') !== false
             || strpos($language, 'zh') === 0
-            || strpos($language, 'cn') !== false;
+            || strpos($language, 'cn') !== false
+            ? 'zh'
+            : 'en';
     }
 
-    return false;
+    return 'en';
+}
+
+function whmcs_peakrack_epay_is_chinese_language(array $params = [])
+{
+    return whmcs_peakrack_epay_client_locale($params) !== 'en';
+}
+
+function whmcs_peakrack_epay_traditionalize($text)
+{
+    $text = (string) $text;
+    if ($text === '') {
+        return '';
+    }
+
+    $text = strtr($text, [
+        '易支付' => '易支付',
+        '尚未完整配置' => '尚未完整配置',
+        '支付金额' => '支付金額',
+        '发票' => '帳單',
+        '设置' => '設定',
+        '请求签名失败' => '請求簽名失敗',
+        '使用易支付支付' => '使用易支付付款',
+        '支付网关' => '支付網關',
+        '电脑网站' => '電腦網站',
+        '用于' => '用於',
+        '支付宝支付' => '支付寶支付',
+        '微信支付' => '微信支付',
+        'QQ 钱包' => 'QQ 錢包',
+        '网银支付' => '網銀支付',
+        '收银台' => '收銀台',
+        '请' => '請',
+    ]);
+
+    return strtr($text, [
+        '额' => '額', '发' => '發', '账' => '帳', '单' => '單', '设' => '設',
+        '请' => '請', '签' => '簽', '败' => '敗', '扩' => '擴', '环' => '環',
+        '启' => '啟', '币' => '幣', '转' => '轉', '宝' => '寶', '钱' => '錢',
+        '网' => '網', '关' => '關', '银' => '銀', '台' => '台', '应' => '應',
+        '为' => '為', '于' => '於', '脑' => '腦',
+    ]);
 }
 
 function whmcs_peakrack_epay_lang($key, array $params = [], array $replace = [])
@@ -78,8 +133,11 @@ function whmcs_peakrack_epay_lang($key, array $params = [], array $replace = [])
         ],
     ];
 
-    $locale = whmcs_peakrack_epay_is_chinese_language($params) ? 'zh' : 'en';
-    $message = $messages[$locale][$key] ?? $messages['en'][$key] ?? $key;
+    $locale = whmcs_peakrack_epay_client_locale($params);
+    $message = $messages[$locale === 'zh-hk' ? 'zh' : $locale][$key] ?? $messages['en'][$key] ?? $key;
+    if ($locale === 'zh-hk') {
+        $message = whmcs_peakrack_epay_traditionalize($message);
+    }
 
     foreach ($replace as $name => $value) {
         $message = str_replace(':' . $name, (string) $value, $message);
@@ -178,9 +236,11 @@ function whmcs_peakrack_epay_payment_type_label($type, array $params = [])
         ],
     ];
 
-    $locale = whmcs_peakrack_epay_is_chinese_language($params) ? 'zh' : 'en';
+    $locale = whmcs_peakrack_epay_client_locale($params);
+    $lookupLocale = $locale === 'zh-hk' ? 'zh' : $locale;
+    $label = $labels[$lookupLocale][$type] ?? strtoupper((string) $type);
 
-    return $labels[$locale][$type] ?? strtoupper((string) $type);
+    return $locale === 'zh-hk' ? whmcs_peakrack_epay_traditionalize($label) : $label;
 }
 
 function whmcs_peakrack_epay_payment_type_icon($type, array $params = [])

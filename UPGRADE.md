@@ -35,6 +35,14 @@ This version does not require manual database migration.
 
 ## Version-specific notes
 
+### Upgrade from 2.1.1 to 2.1.2
+
+- No database changes are required.
+- Existing merchant credentials, enabled payment methods, signature mode, and order prefix settings are preserved.
+- Successful callbacks are now applied to WHMCS invoices with the confirmed gateway payment amount.
+- Client messages support Hong Kong Traditional Chinese when WHMCS reports `zh-hk` or an equivalent Traditional Chinese locale.
+- The gateway configuration page now includes a GitHub shortcut and a browser-side update notice. No server-side migration is required for this admin display.
+
 ### Upgrade from 2.0.x to 2.1.x
 
 - No database changes are required.

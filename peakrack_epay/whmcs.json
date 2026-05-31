@@ -2,7 +2,7 @@
   "schema": "1.0",
   "type": "whmcs-gateways",
   "name": "peakrack_epay",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "license": "MIT",
   "category": "payments",
   "description": {
